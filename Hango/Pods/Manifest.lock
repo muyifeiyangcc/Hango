@@ -1,0 +1,86 @@
+PODS:
+  - AFNetworking (4.0.1):
+    - AFNetworking/NSURLSession (= 4.0.1)
+    - AFNetworking/Reachability (= 4.0.1)
+    - AFNetworking/Security (= 4.0.1)
+    - AFNetworking/Serialization (= 4.0.1)
+    - AFNetworking/UIKit (= 4.0.1)
+  - AFNetworking/NSURLSession (4.0.1):
+    - AFNetworking/Reachability
+    - AFNetworking/Security
+    - AFNetworking/Serialization
+  - AFNetworking/Reachability (4.0.1)
+  - AFNetworking/Security (4.0.1)
+  - AFNetworking/Serialization (4.0.1)
+  - AFNetworking/UIKit (4.0.1):
+    - AFNetworking/NSURLSession
+  - IQKeyboardManager (6.5.19)
+  - Masonry (1.1.0)
+  - MBProgressHUD (0.9.2)
+  - "MBProgressHUD+JDragon (0.0.5)":
+    - MBProgressHUD (~> 0.9.2)
+  - MJExtension (3.4.2)
+  - MJRefresh (3.7.9)
+  - RMStore (0.7.1):
+    - RMStore/Core (= 0.7.1)
+  - RMStore/Core (0.7.1)
+  - SDWebImage (5.21.7):
+    - SDWebImage/Core (= 5.21.7)
+  - SDWebImage/Core (5.21.7)
+  - TZImagePickerController (3.8.12):
+    - TZImagePickerController/Basic (= 3.8.12)
+    - TZImagePickerController/Location (= 3.8.12)
+  - TZImagePickerController/Basic (3.8.12)
+  - TZImagePickerController/Location (3.8.12)
+  - YBImageBrowser (3.0.9):
+    - YBImageBrowser/Core (= 3.0.9)
+  - YBImageBrowser/Core (3.0.9):
+    - SDWebImage (>= 5.0.0)
+    - YYImage
+  - YYImage (1.0.4):
+    - YYImage/Core (= 1.0.4)
+  - YYImage/Core (1.0.4)
+
+DEPENDENCIES:
+  - AFNetworking
+  - IQKeyboardManager
+  - Masonry
+  - "MBProgressHUD+JDragon"
+  - MJExtension
+  - MJRefresh
+  - RMStore
+  - TZImagePickerController
+  - YBImageBrowser
+
+SPEC REPOS:
+  trunk:
+    - AFNetworking
+    - IQKeyboardManager
+    - Masonry
+    - MBProgressHUD
+    - "MBProgressHUD+JDragon"
+    - MJExtension
+    - MJRefresh
+    - RMStore
+    - SDWebImage
+    - TZImagePickerController
+    - YBImageBrowser
+    - YYImage
+
+SPEC CHECKSUMS:
+  AFNetworking: 3bd23d814e976cd148d7d44c3ab78017b744cd58
+  IQKeyboardManager: c8665b3396bd0b79402b4c573eac345a31c7d485
+  Masonry: 678fab65091a9290e40e2832a55e7ab731aad201
+  MBProgressHUD: 1569cf7ace17a8bac47aabfbb8580a49690386d1
+  "MBProgressHUD+JDragon": 15bf7583612f0bb9f0bcea634ba5eb247b17d014
+  MJExtension: e97d164cb411aa9795cf576093a1fa208b4a8dd8
+  MJRefresh: ff9e531227924c84ce459338414550a05d2aea78
+  RMStore: 64ba13a9c040e3b7572765d169f77175cd3243e5
+  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
+  TZImagePickerController: 3751b9b850d00802e9f4f7bd8e1365ee5c4f0990
+  YBImageBrowser: 7ecc8bf33ffa5f3b94c397c29b4f3638dd37f527
+  YYImage: 1e1b62a9997399593e4b9c4ecfbbabbf1d3f3b54
+
+PODFILE CHECKSUM: a4414a1cf92eff735b8fcffae7957b80c9334a69
+
+COCOAPODS: 1.16.2
