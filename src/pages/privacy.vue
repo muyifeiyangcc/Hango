@@ -2,12 +2,12 @@
 defineOptions({
   name: 'IndexPage',
 })
-const appName = 'Test1'
+const appName = 'Hango'
 </script>
 
 <template>
-  <div class="protocol">
-    <div class="bt" style="text-align: center">
+  <div class="legal-page">
+    <div class="legal-heading legal-heading--main">
       {{ appName }}'s Privacy Policy
     </div>
     The use of {{ appName }} through mobile applications may involve collection and use
@@ -17,7 +17,7 @@ const appName = 'Test1'
     important for you to understand this Privacy Policy and how you may protect
     your information, so please read this Privacy Policy carefully.
     <br>
-    <div class="bt">
+    <div class="legal-heading">
       1. Application Scope of this Privacy Policy
     </div>
     1.1By using {{ appName }}, you agree that we may access, collect, use and share your
@@ -141,7 +141,7 @@ const appName = 'Test1'
     calculate the percentage of users who visit a particular site feature, or to
     calculate the number of AD displays placed or clicked.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       2.Special Note about Sensitive Personal Information
     </div>
     To provide certain features (e.g. online video calling), we must access your
@@ -165,7 +165,7 @@ const appName = 'Test1'
     years old to access our platform, and will not knowingly collect the
     personal information of users under 18 years old.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       3.How We Use the Information We Collect
     </div>
     We use or may disclose your personal information only in the following
@@ -313,7 +313,7 @@ const appName = 'Test1'
     (ii) subject to any other instructions we give them, including any
     appropriate confidentiality and security measures that we implement.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       4.How to Access Your Information
     </div>
     You can access and modify the information you provided to us through your
@@ -352,7 +352,7 @@ const appName = 'Test1'
     including deleting these personal information improperly collected or used
     by us.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       5. Data access and deletion
     </div>
     You always have control over what information you choose to share with us on
@@ -369,7 +369,7 @@ const appName = 'Test1'
     messages or identity theft. {{ appName }} is not responsible for any use or misuse
     of your information resulting from the disclosure of your information
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       6. Security
     </div>
     Protecting user privacy and personal information is a top priority at {{ appName }},
@@ -380,7 +380,7 @@ const appName = 'Test1'
     to provide, operate and develop it.Maintenance, support can be political
     into the service.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       7. Age
     </div>
     This service is not targeted at children under the age of eighteen (18) and
@@ -393,7 +393,7 @@ const appName = 'Test1'
     before collecting any personally identifiable information from children
     under 18 years of age.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       8. Change notification
     </div>
     We reserve the right to change this Privacy Policy at our sole discretion.
@@ -410,7 +410,7 @@ const appName = 'Test1'
     website means that you accept the revised Privacy Policy. If you do not
     agree to the terms of the Privacy Policy, you should not use the Service.
     <br><br>
-    <div class="bt">
+    <div class="legal-heading">
       9. Contacting Us
     </div>
     If you have any questions about our Privacy Policy or any privacy-related
@@ -418,19 +418,3 @@ const appName = 'Test1'
     <br><br>
   </div>
 </template>
-
-<style scoped>
-  .protocol {
-    font-size: 14px;
-    margin-bottom: 14px;
-    color: #000;
-    margin-left:6px;
-    margin-right:6px;
-    background-color: fff;
-  }
-  .bt {
-    font-size: 20px;
-    margin: 6px 0px;
-    color: #7f1146;
-  }
-</style>

@@ -2,7 +2,7 @@
 #import "HangoAppRouter.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
 @implementation HangoLoginPromptViewController
 

@@ -4,8 +4,8 @@
 #import "HangoRequestManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import "HangoPrivateChatViewController.h"
-#import <Masonry/Masonry.h>
+#import "HangoPrivateDialogueViewController.h"
+#import "Masonry.h"
 
 @implementation HangoAddContactViewController {
     UIView *_searchWrap;
@@ -44,7 +44,7 @@
         make.left.right.bottom.equalTo(self.contentView);
     }];
 
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view operation:^id {
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:NO operation:^id {
         return [HangoDataStore shared].contacts;
     } completion:^(id result, NSError *error) {
         self->_suggestions = result;
@@ -121,7 +121,7 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     HangoContact *contact = _suggestions[indexPath.row];
-    HangoPrivateChatViewController *vc = [[HangoPrivateChatViewController alloc] init];
+    HangoPrivateDialogueViewController *vc = [[HangoPrivateDialogueViewController alloc] init];
     vc.contact = contact;
     [self.navigationController pushViewController:vc animated:YES];
 }

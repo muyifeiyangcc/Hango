@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-@class HangoUser;
+@class HangoPersona;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,8 +24,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)applyGradientBackgroundToView:(UIView *)view;
 
 + (nullable UIImage *)imageNamed:(NSString *)name;
++ (BOOL)isRealPersonAvatarName:(NSString *)name;
++ (NSString *)resolvedPartyAvatarName:(NSString *)name;
++ (NSString *)partyDisplayAvatarNameForHostName:(NSString *)hostName fallbackAvatarName:(NSString *)fallbackAvatarName;
 + (nullable UIImage *)avatarImageNamed:(NSString *)name;
-+ (nullable UIImage *)avatarImageForUser:(HangoUser *)user;
++ (nullable UIImage *)avatarImageForPersona:(HangoPersona *)persona;
 + (nullable UIImage *)resourceImageNamed:(NSString *)name;
 
 @end

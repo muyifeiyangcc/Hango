@@ -3,8 +3,9 @@
 #import "HangoRequestManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <MBProgressHUD+JDragon/MBProgressHUD+JDragon.h>
-#import <Masonry/Masonry.h>
+#import "HangoPermissionManager.h"
+#import "HangoHUD.h"
+#import "Masonry.h"
 
 static NSString * const kReportDetailPlaceholder = @"Please describe the issue you are reporting...";
 
@@ -126,12 +127,16 @@ static NSString * const kReportDetailPlaceholder = @"Please describe the issue y
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
         [sheet addAction:[UIAlertAction actionWithTitle:@"Take Photo" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-            [self presentImagePickerWithSourceType:UIImagePickerControllerSourceTypeCamera];
+            [HangoPermissionManager presentImagePickerWithSourceType:UIImagePickerControllerSourceTypeCamera
+                                                  fromViewController:self
+                                                            delegate:self];
         }]];
     }
     if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypePhotoLibrary]) {
         [sheet addAction:[UIAlertAction actionWithTitle:@"Choose from Library" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-            [self presentImagePickerWithSourceType:UIImagePickerControllerSourceTypePhotoLibrary];
+            [HangoPermissionManager presentImagePickerWithSourceType:UIImagePickerControllerSourceTypePhotoLibrary
+                                                  fromViewController:self
+                                                            delegate:self];
         }]];
     }
     [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
@@ -140,17 +145,6 @@ static NSString * const kReportDetailPlaceholder = @"Please describe the issue y
         sheet.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 1, 1);
     }
     [self presentViewController:sheet animated:YES completion:nil];
-}
-
-- (void)presentImagePickerWithSourceType:(UIImagePickerControllerSourceType)sourceType {
-    if (![UIImagePickerController isSourceTypeAvailable:sourceType]) {
-        return;
-    }
-    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
-    picker.sourceType = sourceType;
-    picker.delegate = self;
-    picker.allowsEditing = YES;
-    [self presentViewController:picker animated:YES completion:nil];
 }
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info {
@@ -176,7 +170,7 @@ static NSString * const kReportDetailPlaceholder = @"Please describe the issue y
         return;
     }
 
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:YES completion:^{
         [MBProgressHUD showSuccessMessage:@"Report successful"];
         [self.navigationController popViewControllerAnimated:YES];
     }];

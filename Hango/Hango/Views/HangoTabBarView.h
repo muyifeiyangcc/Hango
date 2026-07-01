@@ -6,7 +6,7 @@ typedef NS_ENUM(NSInteger, HangoTabIndex) {
     HangoTabIndexHome = 0,
     HangoTabIndexContacts,
     HangoTabIndexCreate,
-    HangoTabIndexMessages,
+    HangoTabIndexInbox,
     HangoTabIndexProfile
 };
 
@@ -16,6 +16,8 @@ typedef NS_ENUM(NSInteger, HangoTabIndex) {
 @property (nonatomic, assign) HangoTabIndex selectedIndex;
 
 + (CGFloat)preferredHeightForSafeAreaBottom:(CGFloat)safeAreaBottom;
+
++ (CGFloat)preferredHeightForWidth:(CGFloat)width safeAreaBottom:(CGFloat)safeAreaBottom;
 
 - (void)setSelectedIndex:(HangoTabIndex)selectedIndex animated:(BOOL)animated;
 

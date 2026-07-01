@@ -1,11 +1,16 @@
+@import './theme.css';
+
 html,
 body,
 #app {
   height: 100%;
   margin: 0;
   padding: 0;
+  background: var(--hango-bg);
+  background-attachment: fixed;
 }
 
-/* html.dark {
-  background: #121212;
-} */
+main {
+  min-height: 100%;
+  background: transparent;
+}

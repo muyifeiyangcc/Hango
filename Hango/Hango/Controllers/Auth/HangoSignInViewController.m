@@ -1,11 +1,15 @@
 #import "HangoSignInViewController.h"
 #import "HangoForgotPasswordViewController.h"
+#import "HangoProfileSetupViewController.h"
+#import "HangoEULAViewController.h"
 #import "HangoRequestManager.h"
 #import "HangoSessionManager.h"
+#import "HangoDataStore.h"
 #import "HangoAppRouter.h"
+#import "HangoLaunchPermissionManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
 @implementation HangoSignInViewController {
     UIView *_emailWrap;
@@ -14,6 +18,9 @@
 
 - (void)setupUI {
     self.showsBackButton = YES;
+
+    UIButton *termsBtn = [HangoDesignKit termsNavButtonWithTarget:self action:@selector(openEULA)];
+    [self.view addSubview:termsBtn];
 
     UILabel *title = [HangoDesignKit titleLabel:@"Sign in"];
     title.textAlignment = NSTextAlignmentCenter;
@@ -43,6 +50,12 @@
     [login addTarget:self action:@selector(loginTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.contentView addSubview:login];
 
+    [termsBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(8);
+        make.right.equalTo(self.view).offset(-16);
+        make.width.mas_equalTo(68);
+        make.height.mas_equalTo(34);
+    }];
     [title mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(108);
         make.centerX.equalTo(self.contentView);
@@ -72,10 +85,22 @@
     [self.navigationController pushViewController:[[HangoForgotPasswordViewController alloc] init] animated:YES];
 }
 
+- (void)openEULA {
+    [self.navigationController pushViewController:[[HangoEULAViewController alloc] init] animated:YES];
+}
+
 - (void)loginTapped {
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
-        [[HangoSessionManager shared] loginWithEmail:@"" password:@""];
-        [HangoAppRouter showMainTabBar];
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [[HangoRequestManager shared] requestWithDelay:0.75 inView:weakSelf.view showsHUD:YES completion:^{
+            [[HangoSessionManager shared] loginWithEmail:@"" password:@""];
+            if ([[HangoDataStore shared] hasCompletedProfile]) {
+                [HangoAppRouter showMainTabBar];
+            } else {
+                [weakSelf.navigationController pushViewController:[[HangoProfileSetupViewController alloc] init] animated:YES];
+            }
+        }];
     }];
 }
 

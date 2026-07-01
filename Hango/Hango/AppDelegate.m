@@ -1,11 +1,12 @@
 #import "AppDelegate.h"
-#import <IQKeyboardManager/IQKeyboardManager.h>
+#import "HangoIAPManager.h"
+#import "HangoKeyboardManager.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    [IQKeyboardManager sharedManager].enable = YES;
-    [IQKeyboardManager sharedManager].shouldResignOnTouchOutside = YES;
+    [HangoKeyboardManager install];
+    [[HangoIAPManager shared] start];
     return YES;
 }
 

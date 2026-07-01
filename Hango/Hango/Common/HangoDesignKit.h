@@ -12,6 +12,7 @@ typedef NS_ENUM(NSInteger, HangoPillButtonStyle) {
 @interface HangoDesignKit : NSObject
 
 + (UIButton *)backButtonWithTarget:(id)target action:(SEL)action;
++ (UIButton *)termsNavButtonWithTarget:(id)target action:(SEL)action;
 + (UIButton *)pillButtonWithTitle:(NSString *)title style:(HangoPillButtonStyle)style;
 + (UIButton *)circleButtonWithImageName:(NSString *)imageName size:(CGFloat)size;
 
@@ -27,10 +28,16 @@ typedef NS_ENUM(NSInteger, HangoPillButtonStyle) {
 
 + (UIButton *)menuRowWithIcon:(NSString *)iconName title:(NSString *)title target:(id)target action:(SEL)action;
 + (UIView *)albumCardWithImageName:(NSString *)imageName dateText:(NSString *)dateText;
++ (UIView *)albumCardWithImage:(nullable UIImage *)image fallbackImageName:(NSString *)imageName dateText:(NSString *)dateText;
 + (UIView *)bottomSheetWithTitle:(NSString *)title;
 
 + (void)applyCardShadow:(UIView *)view;
 + (void)applyReceiveButtonStyle:(UIButton *)button;
+
++ (CGFloat)voiceBubbleWidthForDuration:(NSInteger)duration screenWidth:(CGFloat)screenWidth;
+
++ (void)startVoicePlaybackRippleOnView:(UIView *)view color:(UIColor *)color;
++ (void)stopVoicePlaybackRippleOnView:(UIView *)view;
 
 @end
 

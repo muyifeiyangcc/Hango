@@ -1,95 +1,145 @@
 #import "HangoEULAViewController.h"
+#import "HangoWebPageViewController.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
+
+static NSString * const kHangoEULABodyText =
+@"This End User License Agreement (EULA) governs your use of Hango. By downloading, accessing or using Hango, you agree to be bound by this Agreement. If you do not agree to the terms herein, you may not use this application.\n\n"
+@"1. Eligibility\n"
+@"By using Hango, you confirm that you are at least 18 years of age and agree to provide true and accurate age information. Individuals under the age of 18 are prohibited from using this application.\n\n"
+@"2. Member Generated Content\n"
+@"Hango allows members to share, share and view text, image and video content uploaded by members (hereinafter referred to as \"Member Content\").\n"
+@"By sharing content on Hango, you agree to the following terms:\n\n"
+@"2.1 Prohibited Content\n"
+@"You may not share offensive, harmful, inappropriate or illegal content on the platform, including but not limited to:\n"
+@"- Hate speech, abuse, harassment, threats or personal attacks against others;\n"
+@"- Pornographic, explicit or vulgar and obscene content;\n"
+@"- Content that advocates violence, discrimination, illegal activities or infringes on the legitimate rights and interests of others;\n"
+@"- Content that violates public order and good customs, is irrelevant to the use of Hango, or is used for unauthorized commercial advertising and promotion;\n"
+@"- False or misleading information of any kind.\n\n"
+@"2.2 Content Licensing\n"
+@"You retain full ownership of your Member Content. However, by sharing Member Content on Hango, you grant Hango a non-exclusive, royalty-free license to use, distribute, display and promote such content within Hango and its affiliated services.\n\n"
+@"3. Reporting and Response Mechanism\n\n"
+@"3.1 Member Responsibilities\n"
+@"If you discover any content that violates this EULA, you shall promptly report it through the built-in reporting function of Hango.\n\n"
+@"3.2 Platform Response Rules\n"
+@"We will review all reported content within 24 hours and take corresponding measures, including but not limited to removing illegal content, issuing warnings to violators, or suspending persona accounts. Repeated violations will result in permanent account suspension.\n\n"
+@"4. Privacy Policy\n"
+@"Your use of Hango constitutes your acknowledgment and acceptance of our Privacy Policy, which specifies the rules for our collection, use and protection of your personal information.\n\n"
+@"5. Termination\n"
+@"We reserve the right to terminate or suspend your access to Hango at any time, with or without prior notice. You may cease using the application and delete your account at any time on your own initiative.\n\n"
+@"6. Agreement Modification\n"
+@"We may amend the terms of this Agreement at any time. Revised terms will be announced on Hango. Your continued use of the application after the announcement constitutes your acceptance of the updated Agreement.\n\n"
+@"7. Disclaimer\n"
+@"Hango is provided on an \"AS IS\" basis without any express or implied warranties. We do not guarantee that the application service will be uninterrupted, error-free or completely secure, nor do we guarantee the absolute accuracy of all content on the platform.\n\n"
+@"8. Limitation of Liability\n"
+@"To the maximum extent permitted by applicable laws, we shall not be liable for any losses or damages arising from your use of Hango and its internal content.";
 
 @implementation HangoEULAViewController {
-    BOOL _agreed;
+    UIScrollView *_scrollView;
+    UIView *_scrollContent;
     UIButton *_agreeCheck;
-    UITextView *_eulaTextView;
-}
-
-+ (NSString *)eulaBodyText {
-    return @"This End User License Agreement (EULA) governs your use of Hango. By downloading, accessing or using Hango, you agree to be bound by this Agreement. If you do not agree to the terms herein, you may not use this application.\n\n1. Eligibility\nBy using Hango, you confirm that you are at least 18 years of age and agree to provide true and accurate age information. Individuals under the age of 18 are prohibited from using this application.\n\n2. User Generated Content\nHango allows users to post, share and view text, image and video content uploaded by users (hereinafter referred to as \"User Content\").\nBy posting content on Hango, you agree to the following terms:\n2.1 Prohibited Content\nYou may not post offensive, harmful, inappropriate or illegal content on the platform, including but not limited to:\n- Hate speech, abuse, harassment, threats or personal attacks against others;\n- Pornographic, explicit or vulgar and obscene content;\n- Content that advocates violence, discrimination, illegal activities or infringes on the legitimate rights and interests of others;\n- Content that violates public order and good customs, is irrelevant to the use of Hango, or is used for unauthorized commercial advertising and promotion;\n- False or misleading information of any kind.\n2.2 Content Licensing\nYou retain full ownership of your User Content. However, by posting User Content on Hango, you grant Hango a non-exclusive, royalty-free license to use, distribute, display and promote such content within Hango and its affiliated services.\n\n3. Reporting and Response Mechanism\n3.1 User Responsibilities\nIf you discover any content that violates this EULA, you shall promptly report it through the built-in reporting function of Hango.\n3.2 Platform Response Rules\nWe will review all reported content within 24 hours and take corresponding measures, including but not limited to removing illegal content, issuing warnings to violators, or suspending user accounts. Repeated violations will result in permanent account suspension.\n\n4. Privacy Policy\nYour use of Hango constitutes your acknowledgment and acceptance of our [Privacy Policy], which specifies the rules for our collection, use and protection of your personal information.\n\n5. Termination\nWe reserve the right to terminate or suspend your access to Hango at any time, with or without prior notice. You may cease using the application and delete your account at any time on your own initiative.\n\n6. Agreement Modification\nWe may amend the terms of this Agreement at any time. Revised terms will be announced on Hango. Your continued use of the application after the announcement constitutes your acceptance of the updated Agreement.\n\n7. Disclaimer\nHango is provided on an \"AS IS\" basis without any express or implied warranties. We do not guarantee that the application service will be uninterrupted, error-free or completely secure, nor do we guarantee the absolute accuracy of all content on the platform.\n\n8. Limitation of Liability\nTo the maximum extent permitted by applicable laws, we shall not be liable for any losses or damages arising from your use of Hango and its internal content.";
+    BOOL _agreed;
 }
 
 - (void)setupUI {
     self.showsBackButton = YES;
     self.navTitleText = @"EULA";
 
-    _eulaTextView = [[UITextView alloc] init];
-    _eulaTextView.editable = NO;
-    _eulaTextView.selectable = NO;
-    _eulaTextView.backgroundColor = UIColor.clearColor;
-    _eulaTextView.textContainerInset = UIEdgeInsetsZero;
-    _eulaTextView.textContainer.lineFragmentPadding = 0;
-    _eulaTextView.showsVerticalScrollIndicator = YES;
-    _eulaTextView.font = [UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightRegular];
-    _eulaTextView.textColor = [HangoTheme primaryDarkColor];
-    _eulaTextView.text = [self.class eulaBodyText];
-    [self.contentView addSubview:_eulaTextView];
+    _scrollView = [[UIScrollView alloc] init];
+    _scrollView.showsVerticalScrollIndicator = YES;
+    _scrollView.alwaysBounceVertical = YES;
+    [self.contentView addSubview:_scrollView];
 
-    UIButton *termsLink = [self linkButtonWithTitle:@"Terms of Use" action:@selector(scrollToTop)];
-    UIButton *privacyLink = [self linkButtonWithTitle:@"Privacy Policy" action:@selector(scrollToPrivacySection)];
-    [self.contentView addSubview:termsLink];
-    [self.contentView addSubview:privacyLink];
+    _scrollContent = [[UIView alloc] init];
+    [_scrollView addSubview:_scrollContent];
 
-    UIButton *cancelBtn = [HangoDesignKit pillButtonWithTitle:@"Cancel" style:HangoPillButtonStyleDark];
-    cancelBtn.backgroundColor = [HangoTheme primaryDarkColor];
-    [cancelBtn setTitleColor:[HangoTheme backgroundTopColor] forState:UIControlStateNormal];
-    [cancelBtn addTarget:self action:@selector(goBack) forControlEvents:UIControlEventTouchUpInside];
-    [self.contentView addSubview:cancelBtn];
+    UILabel *bodyLabel = [[UILabel alloc] init];
+    bodyLabel.numberOfLines = 0;
+    bodyLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
+    bodyLabel.textColor = [HangoTheme primaryDarkColor];
+    bodyLabel.text = kHangoEULABodyText;
+    [_scrollContent addSubview:bodyLabel];
 
-    UIButton *agreeBtn = [HangoDesignKit pillButtonWithTitle:@"I agree" style:HangoPillButtonStyleLight];
-    agreeBtn.layer.borderWidth = 0;
-    [agreeBtn addTarget:self action:@selector(agreeTapped) forControlEvents:UIControlEventTouchUpInside];
-    [self.contentView addSubview:agreeBtn];
+    UIButton *termsButton = [self linkButtonWithTitle:@"Terms of Use" action:@selector(openTermsOfUse)];
+    UIButton *privacyButton = [self linkButtonWithTitle:@"Privacy Policy" action:@selector(openPrivacyPolicy)];
+    [_scrollContent addSubview:termsButton];
+    [_scrollContent addSubview:privacyButton];
+
+    UIView *footer = [[UIView alloc] init];
+    [self.contentView addSubview:footer];
+
+    UIButton *cancelButton = [HangoDesignKit pillButtonWithTitle:@"Cancel" style:HangoPillButtonStyleDark];
+    cancelButton.layer.cornerRadius = 20;
+    [cancelButton setTitleColor:[HangoTheme accentBlueColor] forState:UIControlStateNormal];
+    [cancelButton addTarget:self action:@selector(cancelTapped) forControlEvents:UIControlEventTouchUpInside];
+    [footer addSubview:cancelButton];
+
+    UIButton *agreeButton = [HangoDesignKit pillButtonWithTitle:@"I agree" style:HangoPillButtonStyleLight];
+    agreeButton.layer.cornerRadius = 20;
+    agreeButton.layer.borderWidth = 1.2;
+    agreeButton.layer.borderColor = [HangoTheme primaryDarkColor].CGColor;
+    [agreeButton addTarget:self action:@selector(agreeTapped) forControlEvents:UIControlEventTouchUpInside];
+    [footer addSubview:agreeButton];
 
     UIView *agreeRow = [self agreementRow];
-    [self.contentView addSubview:agreeRow];
+    [footer addSubview:agreeRow];
 
-    [_eulaTextView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(52);
-        make.left.equalTo(self.contentView).offset(24);
-        make.right.equalTo(self.contentView).offset(-24);
-        make.bottom.equalTo(termsLink.mas_top).offset(-16);
+    [_scrollView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.contentView).offset(52);
+        make.left.right.equalTo(self.contentView);
+        make.bottom.equalTo(footer.mas_top);
     }];
-    [termsLink mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.equalTo(self.contentView).offset(24);
-        make.bottom.equalTo(cancelBtn.mas_top).offset(-20);
+    [_scrollContent mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.edges.equalTo(_scrollView);
+        make.width.equalTo(_scrollView);
     }];
-    [privacyLink mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.right.equalTo(self.contentView).offset(-24);
-        make.centerY.equalTo(termsLink);
+    [bodyLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_scrollContent).offset(8);
+        make.left.equalTo(_scrollContent).offset(24);
+        make.right.equalTo(_scrollContent).offset(-24);
     }];
-    [cancelBtn mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.equalTo(self.contentView).offset(24);
-        make.bottom.equalTo(agreeRow.mas_top).offset(-18);
-        make.height.mas_equalTo(50);
-        make.right.equalTo(self.contentView.mas_centerX).offset(-6);
+    [termsButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(bodyLabel.mas_bottom).offset(20);
+        make.left.equalTo(bodyLabel);
+        make.bottom.equalTo(_scrollContent).offset(-16);
     }];
-    [agreeBtn mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.right.equalTo(self.contentView).offset(-24);
-        make.left.equalTo(self.contentView.mas_centerX).offset(6);
-        make.centerY.height.equalTo(cancelBtn);
+    [privacyButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(termsButton);
+        make.right.equalTo(bodyLabel);
+    }];
+    [footer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.right.bottom.equalTo(self.contentView);
+    }];
+    [cancelButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(footer).offset(8);
+        make.left.equalTo(footer).offset(24);
+        make.height.mas_equalTo(52);
+    }];
+    [agreeButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.width.height.equalTo(cancelButton);
+        make.left.equalTo(cancelButton.mas_right).offset(12);
+        make.right.equalTo(footer).offset(-24);
     }];
     [agreeRow mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.equalTo(self.contentView).offset(24);
-        make.right.equalTo(self.contentView).offset(-24);
-        make.bottom.equalTo(self.view.mas_safeAreaLayoutGuideBottom).offset(-10);
+        make.top.equalTo(cancelButton.mas_bottom).offset(16);
+        make.left.equalTo(footer).offset(24);
+        make.right.equalTo(footer).offset(-24);
+        make.bottom.equalTo(self.view.mas_safeAreaLayoutGuideBottom).offset(-16);
     }];
 }
 
 - (UIButton *)linkButtonWithTitle:(NSString *)title action:(SEL)action {
-    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
-    NSDictionary *attrs = @{
-        NSFontAttributeName: [HangoTheme monoFont],
-        NSForegroundColorAttributeName: [HangoTheme primaryDarkColor],
-        NSUnderlineStyleAttributeName: @(NSUnderlineStyleSingle)
-    };
-    [btn setAttributedTitle:[[NSAttributedString alloc] initWithString:title attributes:attrs] forState:UIControlStateNormal];
-    [btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
-    return btn;
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    [button setTitle:title forState:UIControlStateNormal];
+    [button setTitleColor:[HangoTheme primaryDarkColor] forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+    NSDictionary *attributes = @{NSUnderlineStyleAttributeName: @(NSUnderlineStyleSingle)};
+    NSAttributedString *titleAttr = [[NSAttributedString alloc] initWithString:title attributes:attributes];
+    [button setAttributedTitle:titleAttr forState:UIControlStateNormal];
+    [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+    return button;
 }
 
 - (UIView *)agreementRow {
@@ -105,6 +155,8 @@
     UILabel *label = [[UILabel alloc] init];
     label.numberOfLines = 2;
     label.attributedText = [self agreementAttributedText];
+    label.userInteractionEnabled = YES;
+    [label addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(agreementLabelTapped:)]];
     [row addSubview:label];
 
     [_agreeCheck mas_makeConstraints:^(MASConstraintMaker *make) {
@@ -120,15 +172,15 @@
 }
 
 - (NSAttributedString *)agreementAttributedText {
-    NSString *text = @"Agree with User Agreement and Privacy Policy";
+    NSString *text = @"Agree with Member Agreement and Privacy Policy";
     NSMutableAttributedString *attr = [[NSMutableAttributedString alloc] initWithString:text attributes:@{
         NSFontAttributeName: [HangoTheme captionFont],
         NSForegroundColorAttributeName: [HangoTheme primaryDarkColor]
     }];
-    NSRange userRange = [text rangeOfString:@"User Agreement"];
+    NSRange agreementRange = [text rangeOfString:@"Member Agreement"];
     NSRange privacyRange = [text rangeOfString:@"Privacy Policy"];
-    if (userRange.location != NSNotFound) {
-        [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:userRange];
+    if (agreementRange.location != NSNotFound) {
+        [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:agreementRange];
     }
     if (privacyRange.location != NSNotFound) {
         [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:privacyRange];
@@ -140,9 +192,6 @@
     NSString *imageName = _agreed ? @"agreement_checked" : @"agreement_unchecked";
     UIImage *image = [[HangoTheme imageNamed:imageName] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
     [_agreeCheck setImage:image forState:UIControlStateNormal];
-    _agreeCheck.backgroundColor = UIColor.clearColor;
-    _agreeCheck.layer.borderWidth = 0;
-    _agreeCheck.layer.cornerRadius = 0;
 }
 
 - (void)toggleAgree {
@@ -150,27 +199,65 @@
     [self updateAgreeCheckImage];
 }
 
-- (void)scrollToTop {
-    [_eulaTextView setContentOffset:CGPointZero animated:YES];
+- (NSRange)rangeAtPoint:(CGPoint)point inLabel:(UILabel *)label {
+    NSTextStorage *storage = [[NSTextStorage alloc] initWithAttributedString:label.attributedText];
+    NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
+    NSTextContainer *container = [[NSTextContainer alloc] initWithSize:label.bounds.size];
+    container.lineFragmentPadding = 0;
+    container.maximumNumberOfLines = label.numberOfLines;
+    container.lineBreakMode = label.lineBreakMode;
+    [layoutManager addTextContainer:container];
+    [storage addLayoutManager:layoutManager];
+
+    NSUInteger index = [layoutManager characterIndexForPoint:point inTextContainer:container fractionOfDistanceBetweenInsertionPoints:NULL];
+    if (index < label.attributedText.length) {
+        return NSMakeRange(index, 1);
+    }
+    return NSMakeRange(NSNotFound, 0);
 }
 
-- (void)scrollToPrivacySection {
-    NSRange range = [_eulaTextView.text rangeOfString:@"4. Privacy Policy"];
-    if (range.location != NSNotFound) {
-        [_eulaTextView scrollRangeToVisible:range];
+- (void)agreementLabelTapped:(UITapGestureRecognizer *)gesture {
+    UILabel *label = (UILabel *)gesture.view;
+    if (![label isKindOfClass:UILabel.class] || label.attributedText.length == 0) {
+        return;
     }
+
+    NSString *text = label.attributedText.string;
+    NSRange agreementRange = [text rangeOfString:@"Member Agreement"];
+    NSRange privacyRange = [text rangeOfString:@"Privacy Policy"];
+    NSRange targetRange = [self rangeAtPoint:[gesture locationInView:label] inLabel:label];
+
+    if (agreementRange.location != NSNotFound && NSLocationInRange(targetRange.location, agreementRange)) {
+        [self openTermsOfUse];
+        return;
+    }
+    if (privacyRange.location != NSNotFound && NSLocationInRange(targetRange.location, privacyRange)) {
+        [self openPrivacyPolicy];
+    }
+}
+
+- (void)openTermsOfUse {
+    [self.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+}
+
+- (void)openPrivacyPolicy {
+    [self.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+}
+
+- (void)cancelTapped {
+    [self.navigationController popViewControllerAnimated:YES];
 }
 
 - (void)agreeTapped {
     if (!_agreed) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil
-                                                                       message:@"Please agree to the User Agreement and Privacy Policy."
+                                                                       message:@"Please agree to the Member Agreement and Privacy Policy."
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
         return;
     }
-    [self goBack];
+    [self.navigationController popViewControllerAnimated:YES];
 }
 
 @end

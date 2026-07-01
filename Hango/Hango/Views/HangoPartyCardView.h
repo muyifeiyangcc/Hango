@@ -4,8 +4,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface HangoPartyCardView : UIView
-@property (nonatomic, copy, nullable) void (^onReceive)(void);
 - (void)configureWithParty:(HangoParty *)party;
+- (void)configureWithParty:(HangoParty *)party showsAcceptButton:(BOOL)showsAcceptButton;
 @end
 
 NS_ASSUME_NONNULL_END

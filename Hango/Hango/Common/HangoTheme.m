@@ -1,5 +1,5 @@
 #import "HangoTheme.h"
-#import "HangoUser.h"
+#import "HangoPersona.h"
 
 @implementation HangoTheme
 
@@ -95,25 +95,55 @@
     return nil;
 }
 
++ (NSSet<NSString *> *)realPersonAvatarNames {
+    static NSSet<NSString *> *names;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        names = [NSSet setWithArray:@[@"Palmer", @"Norris", @"Dillon", @"Lillie", @"Sophia", @"Faith"]];
+    });
+    return names;
+}
+
++ (BOOL)isRealPersonAvatarName:(NSString *)name {
+    return name.length > 0 && [[self realPersonAvatarNames] containsObject:name];
+}
+
++ (NSString *)resolvedPartyAvatarName:(NSString *)name {
+    if ([self isRealPersonAvatarName:name]) {
+        return name;
+    }
+    return name ?: @"";
+}
+
++ (NSString *)partyDisplayAvatarNameForHostName:(NSString *)hostName fallbackAvatarName:(NSString *)fallbackAvatarName {
+    if ([self isRealPersonAvatarName:hostName]) {
+        return hostName;
+    }
+    if ([self isRealPersonAvatarName:fallbackAvatarName]) {
+        return fallbackAvatarName;
+    }
+    return fallbackAvatarName.length > 0 ? fallbackAvatarName : hostName;
+}
+
 + (UIImage *)avatarImageNamed:(NSString *)name {
     if (name.length == 0) {
-        name = @"avatar_1";
+        name = @"edit_avatar";
     }
     return [self imageNamed:name];
 }
 
-+ (UIImage *)avatarImageForUser:(HangoUser *)user {
-    if (!user) {
++ (UIImage *)avatarImageForPersona:(HangoPersona *)persona {
+    if (!persona) {
         return nil;
     }
-    if (user.avatarLocalPath.length > 0) {
-        UIImage *localImage = [UIImage imageWithContentsOfFile:user.avatarLocalPath];
+    if (persona.avatarLocalPath.length > 0) {
+        UIImage *localImage = [UIImage imageWithContentsOfFile:persona.avatarLocalPath];
         if (localImage) {
             return localImage;
         }
     }
-    if (user.avatarName.length > 0) {
-        return [self avatarImageNamed:user.avatarName];
+    if (persona.avatarName.length > 0) {
+        return [self avatarImageNamed:persona.avatarName];
     }
     return nil;
 }

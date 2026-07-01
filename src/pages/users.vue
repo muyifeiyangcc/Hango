@@ -2,25 +2,25 @@
 defineOptions({
   name: 'IndexPage',
 })
-const appName = 'Test1'
+const appName = 'Hango'
 </script>
 
 <template>
-  <div class="agreement">
-    <div class="T_title" style="text-align: center">
+  <div class="legal-page">
+    <div class="legal-heading legal-heading--main">
       {{ appName }} User Agreement
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       We hereby advise you to carefully read and understand this User Agreement (hereinafter referred to as “Agreement”)before registering.
 
       In order to clarify rights and obligations of all parties,and protect the legitimate rights and interests of all parties,this Agreement is specially formulated.the contents highlighted in bold underline in this Agreement are specially reminded of your attention.Please ensure that you fully understand this Agreement.You are not authorized to register ,log in or use our services or software(hereinafter referred to as services, software)unless you accept all the Agreement.Your registration,login,usage,etc.will bu deemed as acceptance of this Agreement and you agree to be bound by the Agreement.
 
       We reserve the right,at our discretion, to change,modify,add,or remove portions of the Agreement,sup;ementary Agreement,Privacy Policy,regulative provisions or feature terms at any time by posting the amended version on our software or within the services without prior noice.If you do not agree to these terms or any future amended version,then you must not access,use our services.Otherwise,your access,use of our services shall be deemed to agree any future updated version of them.
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       1.Account
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       1.1 In order to ues our services,We may ask you to create an Account or
       allocate an Account(hereinafter referred to as Account)to you.We can
       modify how your account is registered.
@@ -54,10 +54,10 @@ const appName = 'Test1'
       and user name at any time at our sole discretion.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       2.Service Scope
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       2.1 The specific Service of the Software is provided according to the
       actual situation,including but not limited to video chat,purchase or sent
       virtual gifts.We can modify the Service provided at any time without prior
@@ -70,10 +70,10 @@ const appName = 'Test1'
       your mobile phone information.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       3. User information protection
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       3.1 In the process of registering your Account or using the Service,you
       may be required to fill in or submit certain necessary informayion,such as
       the identity information required by laws,regulations,and regulatory
@@ -86,10 +86,10 @@ const appName = 'Test1'
       parties.For more details,please read our “Privacy pOlicy”carefully.
     </div>
 
-    <div class="T_title">
+    <div class="legal-heading">
       4. Content Requirements and Usage Rules
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       4.1 The Content described in this Agreement refers to any content
       created,uploaded,copied,published and distributed by you,including but not
       limited to registration information and verification details such as
@@ -201,10 +201,10 @@ const appName = 'Test1'
       accordance with this agreement.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       5.Third Party Products and Services
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       5.1 The Service may contain advertisements and promotions offered by third
       parties and you agree to display those advertisements and promotions
       during the course of using the Service. Unless otherwise expressly
@@ -220,10 +220,10 @@ const appName = 'Test1'
       responsible or liable for losses incurred by you arising from services,
       products, behavior of third party.
     </div>
-    <!-- <div class="T_title">
+    <!-- <div class="legal-heading">
       6.Membership
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       6.1 You can purchase membership service,and the included service content
       and price information is subject to the display on relevant service pages
       of this Service.
@@ -244,10 +244,10 @@ const appName = 'Test1'
       effectively exercised.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       7. Subscriptions and Virtual Currency
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       7.1 Subscriptions
       You can buy different subscription packages according to one month, two months and three months.
       For all mobile subscriptions, the fee will be deducted from your iTunes or Google account when you confirm your purchase.
@@ -298,10 +298,10 @@ const appName = 'Test1'
       wireless service bill or deducted from your prepaid balance.
       <br><br>
     </div> -->
-    <div class="T_title">
+    <div class="legal-heading">
       6. Data Storage
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       6.1 We are not responsible for the deleting or storage failure of your
       data in this Service.
       <br><br>
@@ -319,10 +319,10 @@ const appName = 'Test1'
       system.You are responsible for this risk.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       7.Risk
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       7.1 You understand and agree that the Software only provides you with a
       platform for inform ation sharing, transmission.You are responsible for
       all actions under your Account,including any content you transmit and any
@@ -341,10 +341,10 @@ const appName = 'Test1'
       sole discretion according to various factors without prior notice.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       8. Intellectual Property
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       8.1 You acknowledge that intellectual property rights in and relating to
       our Services(other than Content which is contributed and owned by
       advertisers) is owned by us,unless you have legally acquired intellectual
@@ -380,10 +380,10 @@ const appName = 'Test1'
       by us, editing the above information, and authorize third party to use,
       edit,disseminate.
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       9. Liability
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       9.1 If you have illegal,wrongful,defaulting, tort act,we have the right
       in our sole discretion to take any or all of the following measures:to
       give a warning,to disable your ability to use some features,terminate your
@@ -411,10 +411,10 @@ const appName = 'Test1'
       separately or collectively.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       10.Force Majeure And Other Disclaimers
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       10.1 You understand and acknowledge that in the course of using the
       Service, you may encounter problems out of our control, which m ay cause
       the Service to be interrupted.W e are not liable for any Service
@@ -485,10 +485,10 @@ const appName = 'Test1'
       risks or losses, and you must bear all responsibility.
       <br><br>
     </div>
-    <div class="T_title">
+    <div class="legal-heading">
       11.Miscellaneous
     </div>
-    <div class="T_content">
+    <div class="legal-content">
       11.1 We remind you to read this Agreement carefully, especially clauses in
       connection with disclaimer, risks, limitation of you rights and our
       liability. If you are a minor,pleases read with accompany of your
@@ -516,32 +516,3 @@ const appName = 'Test1'
     </div>
   </div>
 </template>
-
-<style  scoped>
-  .agreement {
-    padding: 0px 25px;
-    font-size: 14px;
-    margin-bottom: 14px;
-    color: #666666;
-
-    background-color: #fff;
-  }
-  .T_title {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 1rem 0px;
-    color: #666666;
-  }
-  .T_content {
-    font-size: 14px;
-    margin-bottom: 12px;
-    /* color: #666; */
-  }
-  .title_content {
-    font-size: 12px;
-    margin-bottom: 12px;
-    color: #666;
-    margin-left: 12px;
-    margin-right:12px;
-  }
-</style>

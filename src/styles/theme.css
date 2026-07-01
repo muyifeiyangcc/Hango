@@ -1,0 +1,8 @@
+:root {
+  --hango-bg-top: #b8e8fa;
+  --hango-bg-bottom: #e0f7fa;
+  --hango-bg: linear-gradient(180deg, var(--hango-bg-top) 0%, var(--hango-bg-bottom) 100%);
+  --hango-primary-dark: #243344;
+  --hango-heading: #7f1146;
+  --hango-text: #000;
+}

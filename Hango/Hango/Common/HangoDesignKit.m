@@ -1,6 +1,6 @@
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
 @implementation HangoDesignKit
 
@@ -18,6 +18,18 @@
         [btn setTitleColor:[HangoTheme primaryDarkColor] forState:UIControlStateNormal];
         btn.titleLabel.font = [UIFont boldSystemFontOfSize:24];
     }
+    [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
++ (UIButton *)termsNavButtonWithTarget:(id)target action:(SEL)action {
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.backgroundColor = [UIColor colorWithWhite:1 alpha:0.55];
+    btn.layer.cornerRadius = 16;
+    [btn setTitle:@"EULA" forState:UIControlStateNormal];
+    [btn setTitle:@"EULA" forState:UIControlStateHighlighted];
+    [btn setTitleColor:[HangoTheme primaryDarkColor] forState:UIControlStateNormal];
+    btn.titleLabel.font = [HangoTheme captionFont];
     [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
     return btn;
 }
@@ -183,28 +195,45 @@
     UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
     btn.backgroundColor = UIColor.whiteColor;
     btn.layer.cornerRadius = 14;
-    btn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
-    btn.contentEdgeInsets = UIEdgeInsetsMake(0, 16, 0, 16);
-    [btn setTitle:title forState:UIControlStateNormal];
-    [btn setTitleColor:[HangoTheme primaryDarkColor] forState:UIControlStateNormal];
-    btn.titleLabel.font = [HangoTheme bodyFont];
-    UIImage *icon = [HangoTheme imageNamed:iconName];
-    if (icon) {
-        [btn setImage:icon forState:UIControlStateNormal];
-        btn.imageEdgeInsets = UIEdgeInsetsMake(0, 0, 0, 12);
-        btn.titleEdgeInsets = UIEdgeInsetsMake(0, 12, 0, 0);
-    }
+    [self applyCardShadow:btn];
+
+    UIImageView *iconView = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:iconName]];
+    iconView.contentMode = UIViewContentModeScaleAspectFit;
+    [btn addSubview:iconView];
+
+    UILabel *titleLabel = [[UILabel alloc] init];
+    titleLabel.text = title;
+    titleLabel.font = [HangoTheme bodyFont];
+    titleLabel.textColor = [HangoTheme primaryDarkColor];
+    [btn addSubview:titleLabel];
+
+    [iconView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(btn).offset(16);
+        make.centerY.equalTo(btn);
+        make.width.height.mas_equalTo(22);
+    }];
+    [titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(iconView.mas_right).offset(12);
+        make.centerY.equalTo(btn);
+        make.right.lessThanOrEqualTo(btn).offset(-16);
+    }];
+
     [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
     [btn mas_makeConstraints:^(MASConstraintMaker *make) { make.height.mas_equalTo(52); }];
     return btn;
 }
 
 + (UIView *)albumCardWithImageName:(NSString *)imageName dateText:(NSString *)dateText {
+    return [self albumCardWithImage:nil fallbackImageName:imageName dateText:dateText];
+}
+
++ (UIView *)albumCardWithImage:(UIImage *)image fallbackImageName:(NSString *)imageName dateText:(NSString *)dateText {
     UIView *card = [[UIView alloc] init];
     card.layer.cornerRadius = 14;
     card.clipsToBounds = YES;
 
-    UIImageView *img = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:imageName]];
+    UIImage *displayImage = image ?: [HangoTheme imageNamed:imageName];
+    UIImageView *img = [[UIImageView alloc] initWithImage:displayImage];
     img.contentMode = UIViewContentModeScaleAspectFill;
     [card addSubview:img];
 
@@ -267,6 +296,81 @@
     button.layer.cornerRadius = 18;
     [button setTitleColor:[HangoTheme primaryDarkColor] forState:UIControlStateNormal];
     button.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+}
+
++ (CGFloat)voiceBubbleWidthForDuration:(NSInteger)duration screenWidth:(CGFloat)screenWidth {
+    NSInteger seconds = MAX(duration, 1);
+    CGFloat width = screenWidth > 0 ? screenWidth : CGRectGetWidth(UIScreen.mainScreen.bounds);
+    CGFloat maxWidth = width * 0.8;
+    CGFloat minWidth = 88.0;
+    CGFloat progress = MIN((CGFloat)seconds / 60.0, 1.0);
+    return minWidth + (maxWidth - minWidth) * progress;
+}
+
+static NSInteger const kHangoVoiceRippleContainerTag = 88021;
+
++ (void)startVoicePlaybackRippleOnView:(UIView *)view color:(UIColor *)color {
+    if (!view) {
+        return;
+    }
+    [self stopVoicePlaybackRippleOnView:view];
+    view.clipsToBounds = NO;
+
+    UIView *container = [[UIView alloc] init];
+    container.tag = kHangoVoiceRippleContainerTag;
+    container.userInteractionEnabled = NO;
+    container.backgroundColor = UIColor.clearColor;
+    [view insertSubview:container atIndex:0];
+
+    [container mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(view).offset(12);
+        make.centerY.equalTo(view);
+        make.width.height.mas_equalTo(18);
+    }];
+    [view layoutIfNeeded];
+
+    UIColor *rippleColor = color ?: UIColor.whiteColor;
+    [self addVoiceRippleLayerToContainer:container color:rippleColor delay:0];
+    [self addVoiceRippleLayerToContainer:container color:rippleColor delay:0.55];
+}
+
++ (void)addVoiceRippleLayerToContainer:(UIView *)container color:(UIColor *)color delay:(CFTimeInterval)delay {
+    CALayer *ripple = [CALayer layer];
+    ripple.backgroundColor = [color colorWithAlphaComponent:0.32].CGColor;
+    ripple.cornerRadius = 9;
+    ripple.frame = CGRectMake(0, 0, 18, 18);
+    ripple.opacity = 0;
+    [container.layer addSublayer:ripple];
+
+    CABasicAnimation *scale = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    scale.fromValue = @0.75;
+    scale.toValue = @3.0;
+
+    CABasicAnimation *opacity = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    opacity.fromValue = @0.55;
+    opacity.toValue = @0.0;
+
+    CAAnimationGroup *group = [CAAnimationGroup animation];
+    group.animations = @[scale, opacity];
+    group.duration = 1.1;
+    group.repeatCount = HUGE_VALF;
+    group.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    group.removedOnCompletion = NO;
+    group.fillMode = kCAFillModeForwards;
+    group.beginTime = CACurrentMediaTime() + delay;
+    [ripple addAnimation:group forKey:@"hango.voice.playback.ripple"];
+}
+
++ (void)stopVoicePlaybackRippleOnView:(UIView *)view {
+    if (!view) {
+        return;
+    }
+    UIView *container = [view viewWithTag:kHangoVoiceRippleContainerTag];
+    for (CALayer *layer in container.layer.sublayers.copy) {
+        [layer removeAllAnimations];
+        [layer removeFromSuperlayer];
+    }
+    [container removeFromSuperview];
 }
 
 @end

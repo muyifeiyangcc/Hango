@@ -2,9 +2,10 @@
 #import "HangoProfileSetupViewController.h"
 #import "HangoRequestManager.h"
 #import "HangoSessionManager.h"
+#import "HangoLaunchPermissionManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
 @implementation HangoSignUpViewController {
     UIView *_emailWrap;
@@ -72,7 +73,7 @@
     UITextField *emailField = [_emailWrap viewWithTag:9001];
     NSString *email = [emailField.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     if ([email rangeOfString:@"@"].location == NSNotFound) {
-        [self showAlertWithMessage:@"Please enter a valid email address."];
+        [self showAlertWithText:@"Please enter a valid email address."];
         return;
     }
 
@@ -81,18 +82,21 @@
     NSString *password = passwordField.text ?: @"";
     NSString *confirm = confirmField.text ?: @"";
     if (![password isEqualToString:confirm]) {
-        [self showAlertWithMessage:@"Passwords do not match."];
+        [self showAlertWithText:@"Passwords do not match."];
         return;
     }
 
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
-        [[HangoSessionManager shared] registerWithEmail:email password:password];
-        [self.navigationController pushViewController:[[HangoProfileSetupViewController alloc] init] animated:YES];
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:YES completion:^{
+            [[HangoSessionManager shared] registerWithEmail:email password:password];
+            [self.navigationController pushViewController:[[HangoProfileSetupViewController alloc] init] animated:YES];
+        }];
     }];
 }
 
-- (void)showAlertWithMessage:(NSString *)message {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+- (void)showAlertWithText:(NSString *)text {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:text preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }

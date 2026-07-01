@@ -46,8 +46,12 @@
 
 + (void)showMainTabBarSelectingTab:(HangoTabIndex)tabIndex {
     HangoMainTabBarController *tab = [HangoMainTabBarController mainTabBarController];
-    tab.selectedIndex = tabIndex;
     [self setRootViewController:tab animated:YES];
+    tab.selectedIndex = tabIndex;
+    if (tabIndex < tab.viewControllers.count) {
+        UINavigationController *nav = tab.viewControllers[tabIndex];
+        [nav popToRootViewControllerAnimated:NO];
+    }
 }
 
 + (void)showWelcome {

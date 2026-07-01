@@ -2,28 +2,37 @@
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
 #import "HangoWalletViewController.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
 @implementation HangoNoMoneyViewController
 
 - (void)setupUI {
-    self.view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.45];
+    self.view.backgroundColor = UIColor.clearColor;
+
+    UIButton *dimming = [UIButton buttonWithType:UIButtonTypeCustom];
+    dimming.backgroundColor = [UIColor colorWithWhite:0 alpha:0.45];
+    [dimming addTarget:self action:@selector(cancelTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:dimming];
 
     UIView *sheet = [HangoDesignKit bottomSheetWithTitle:@"Insufficient Balance"];
     sheet.backgroundColor = [UIColor colorWithRed:0.88 green:0.96 blue:1 alpha:1];
     [self.view addSubview:sheet];
 
-    UIImageView *icon = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"artboard_55"]];
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:self.previewImageName ?: @"artboard_46"]];
     icon.contentMode = UIViewContentModeScaleAspectFit;
+    icon.backgroundColor = UIColor.blackColor;
     icon.layer.cornerRadius = 40;
     icon.clipsToBounds = YES;
     [sheet addSubview:icon];
+
+    UIImageView *sparkleIcon = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"钻石图标"]];
+    sparkleIcon.contentMode = UIViewContentModeScaleAspectFit;
+    [sheet addSubview:sparkleIcon];
 
     UILabel *cost = [[UILabel alloc] init];
     cost.text = @"× 50";
     cost.font = [HangoTheme headlineFont];
     cost.textColor = [HangoTheme primaryDarkColor];
-    cost.textAlignment = NSTextAlignmentCenter;
     [sheet addSubview:cost];
 
     UIButton *cancel = [HangoDesignKit pillButtonWithTitle:@"Cancel" style:HangoPillButtonStyleAccent];
@@ -36,6 +45,9 @@
     [recharge addTarget:self action:@selector(rechargeTapped) forControlEvents:UIControlEventTouchUpInside];
     [sheet addSubview:recharge];
 
+    [dimming mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.edges.equalTo(self.view);
+    }];
     [sheet mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.right.bottom.equalTo(self.view);
         make.height.mas_equalTo(320);
@@ -45,9 +57,14 @@
         make.centerX.equalTo(sheet);
         make.width.height.mas_equalTo(80);
     }];
-    [cost mas_makeConstraints:^(MASConstraintMaker *make) {
+    [sparkleIcon mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(icon.mas_bottom).offset(12);
-        make.centerX.equalTo(sheet);
+        make.centerX.equalTo(sheet).offset(-18);
+        make.width.height.mas_equalTo(22);
+    }];
+    [cost mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(sparkleIcon);
+        make.left.equalTo(sparkleIcon.mas_right).offset(4);
     }];
     [cancel mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.equalTo(sheet).offset(24);
@@ -62,7 +79,9 @@
 }
 
 - (void)cancelTapped {
-    if (self.onCancel) self.onCancel();
+    if (self.onCancel) {
+        self.onCancel();
+    }
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 

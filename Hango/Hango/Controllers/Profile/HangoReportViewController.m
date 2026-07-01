@@ -5,9 +5,9 @@
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
 #import "HangoReportDetailViewController.h"
-#import "HangoBlacklistViewController.h"
-#import <MBProgressHUD+JDragon/MBProgressHUD+JDragon.h>
-#import <Masonry/Masonry.h>
+#import "HangoDenyListViewController.h"
+#import "HangoHUD.h"
+#import "Masonry.h"
 
 @implementation HangoReportViewController
 
@@ -31,10 +31,10 @@
         [stack addArrangedSubview:btn];
     }
 
-    UIButton *blacklist = [HangoDesignKit pillButtonWithTitle:@"Add to Blacklist" style:HangoPillButtonStyleOutline];
-    [blacklist addTarget:self action:@selector(openBlacklist) forControlEvents:UIControlEventTouchUpInside];
-    [blacklist mas_makeConstraints:^(MASConstraintMaker *make) { make.height.mas_equalTo(48); }];
-    [stack addArrangedSubview:blacklist];
+    UIButton *denyButton = [HangoDesignKit pillButtonWithTitle:@"Add to Deny List" style:HangoPillButtonStyleOutline];
+    [denyButton addTarget:self action:@selector(openDenyList) forControlEvents:UIControlEventTouchUpInside];
+    [denyButton mas_makeConstraints:^(MASConstraintMaker *make) { make.height.mas_equalTo(48); }];
+    [stack addArrangedSubview:denyButton];
 
     [title mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(self.contentView).offset(52);
@@ -55,14 +55,29 @@
     [self.navigationController pushViewController:vc animated:YES];
 }
 
-- (void)openBlacklist {
-    if (self.contact) {
-        [[HangoDataStore shared] toggleBlacklistForContactId:self.contact.contactId];
+- (void)openDenyList {
+    if (!self.contact) {
+        return;
     }
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
-        [MBProgressHUD showSuccessMessage:@"Added to blacklist"];
-        [self.navigationController pushViewController:[[HangoBlacklistViewController alloc] init] animated:YES];
-    }];
+    if (self.contact.isDenied) {
+        [self.navigationController pushViewController:[[HangoDenyListViewController alloc] init] animated:YES];
+        return;
+    }
+
+    NSString *message = [NSString stringWithFormat:@"Are you sure you want to add %@ to the deny list?", self.contact.name];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Add to Deny List?"
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    __weak typeof(self) weakSelf = self;
+    [alert addAction:[UIAlertAction actionWithTitle:@"Add" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+        [[HangoDataStore shared] addContactToDenyList:weakSelf.contact.contactId];
+        [[HangoRequestManager shared] requestWithDelay:0.75 inView:weakSelf.view showsHUD:YES completion:^{
+            [MBProgressHUD showSuccessMessage:@"Added to deny list"];
+            [weakSelf.navigationController pushViewController:[[HangoDenyListViewController alloc] init] animated:YES];
+        }];
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 @end

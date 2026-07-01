@@ -5,6 +5,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface HangoAlbumItem : NSObject
 
 @property (nonatomic, copy) NSString *albumId;
+@property (nonatomic, copy) NSString *partyId;
 @property (nonatomic, copy) NSString *dateText;
 @property (nonatomic, copy) NSString *imageName;
 

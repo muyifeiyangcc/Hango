@@ -1,10 +1,15 @@
 #import "HangoProfileSetupViewController.h"
+#import "HangoAppleSignInManager.h"
+#import "HangoPersona.h"
+#import "HangoDataStore.h"
 #import "HangoRequestManager.h"
 #import "HangoSessionManager.h"
 #import "HangoAppRouter.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <Masonry/Masonry.h>
+#import "HangoPermissionManager.h"
+#import "HangoHUD.h"
+#import "Masonry.h"
 
 @interface HangoProfileSetupViewController () <UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 @end
@@ -13,11 +18,17 @@
     UIImageView *_avatarView;
     UITextField *_nameField;
     UIView *_underlineView;
+    UIButton *_saveBtn;
     UIImage *_selectedAvatarImage;
+    BOOL _hasExistingAvatar;
+    BOOL _didApplyPrefill;
 }
 
 - (void)setupUI {
     self.showsBackButton = YES;
+    if (self.editingExistingProfile) {
+        self.navTitleText = @"Editing materials";
+    }
 
     UIView *avatarWrap = [[UIView alloc] init];
     [self.contentView addSubview:avatarWrap];
@@ -41,7 +52,7 @@
     [avatarWrap addSubview:editBtn];
 
     _nameField = [[UITextField alloc] init];
-    _nameField.placeholder = @"Enter username";
+    _nameField.placeholder = @"Enter display name";
     _nameField.font = [HangoTheme monoFont];
     _nameField.textColor = [HangoTheme primaryDarkColor];
     _nameField.textAlignment = NSTextAlignmentCenter;
@@ -54,10 +65,11 @@
     _underlineView.backgroundColor = [HangoTheme primaryDarkColor];
     [self.contentView addSubview:_underlineView];
 
-    UIButton *saveBtn = [HangoDesignKit pillButtonWithTitle:@"Save" style:HangoPillButtonStyleDark];
-    saveBtn.layer.cornerRadius = 20;
-    [saveBtn addTarget:self action:@selector(saveTapped) forControlEvents:UIControlEventTouchUpInside];
-    [self.contentView addSubview:saveBtn];
+    NSString *actionTitle = self.editingExistingProfile ? @"Done" : @"Save";
+    _saveBtn = [HangoDesignKit pillButtonWithTitle:actionTitle style:HangoPillButtonStyleDark];
+    _saveBtn.layer.cornerRadius = 20;
+    [_saveBtn addTarget:self action:@selector(saveTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.contentView addSubview:_saveBtn];
 
     [avatarWrap mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(108);
@@ -82,24 +94,79 @@
         make.left.right.equalTo(_nameField);
         make.height.mas_equalTo(1);
     }];
-    [saveBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_saveBtn mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.equalTo(self.contentView).offset(32);
         make.right.equalTo(self.contentView).offset(-32);
         make.bottom.equalTo(self.view.mas_safeAreaLayoutGuideBottom).offset(-36);
         make.height.mas_equalTo(62);
     }];
+
+    [self applyPrefilledProfileIfNeeded];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    if (self.editingExistingProfile) {
+        [self loadExistingProfile];
+    } else {
+        [self applyPrefilledProfileIfNeeded];
+    }
+}
+
+- (void)applyPrefilledProfileIfNeeded {
+    if (_didApplyPrefill || self.editingExistingProfile) {
+        return;
+    }
+    _didApplyPrefill = YES;
+
+    NSString *displayName = self.prefilledDisplayName;
+    if (displayName.length == 0) {
+        displayName = [[HangoDataStore shared] appleCachedDisplayName];
+    }
+    if (displayName.length == 0) {
+        displayName = [[HangoDataStore shared].currentPersona.name stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    }
+    if (displayName.length > 0 && _nameField.text.length == 0) {
+        _nameField.text = displayName;
+    }
+
+    UIImage *avatarImage = self.prefilledAvatarImage;
+    if (!avatarImage && displayName.length > 0) {
+        avatarImage = [HangoAppleSignInManager avatarImageForDisplayName:displayName];
+    }
+    if (avatarImage && !_hasExistingAvatar) {
+        _selectedAvatarImage = avatarImage;
+        _avatarView.image = avatarImage;
+        _avatarView.backgroundColor = UIColor.clearColor;
+        _hasExistingAvatar = YES;
+    }
+}
+
+- (void)loadExistingProfile {
+    HangoPersona *persona = [HangoDataStore shared].currentPersona;
+    _nameField.text = persona.name;
+    UIImage *avatar = [HangoTheme avatarImageForPersona:persona];
+    if (avatar) {
+        _avatarView.image = avatar;
+        _avatarView.backgroundColor = UIColor.clearColor;
+        _hasExistingAvatar = YES;
+    }
 }
 
 - (void)pickAvatar {
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
         [sheet addAction:[UIAlertAction actionWithTitle:@"Take Photo" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-            [self presentImagePickerWithSourceType:UIImagePickerControllerSourceTypeCamera];
+            [HangoPermissionManager presentImagePickerWithSourceType:UIImagePickerControllerSourceTypeCamera
+                                                  fromViewController:self
+                                                            delegate:self];
         }]];
     }
     if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypePhotoLibrary]) {
         [sheet addAction:[UIAlertAction actionWithTitle:@"Choose from Library" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-            [self presentImagePickerWithSourceType:UIImagePickerControllerSourceTypePhotoLibrary];
+            [HangoPermissionManager presentImagePickerWithSourceType:UIImagePickerControllerSourceTypePhotoLibrary
+                                                  fromViewController:self
+                                                            delegate:self];
         }]];
     }
     [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
@@ -108,17 +175,6 @@
         sheet.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 1, 1);
     }
     [self presentViewController:sheet animated:YES completion:nil];
-}
-
-- (void)presentImagePickerWithSourceType:(UIImagePickerControllerSourceType)sourceType {
-    if (![UIImagePickerController isSourceTypeAvailable:sourceType]) {
-        return;
-    }
-    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
-    picker.sourceType = sourceType;
-    picker.delegate = self;
-    picker.allowsEditing = YES;
-    [self presentViewController:picker animated:YES completion:nil];
 }
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info {
@@ -130,6 +186,7 @@
         _selectedAvatarImage = image;
         _avatarView.image = image;
         _avatarView.backgroundColor = UIColor.clearColor;
+        _hasExistingAvatar = YES;
     }
     [picker dismissViewControllerAnimated:YES completion:nil];
 }
@@ -138,28 +195,43 @@
     [picker dismissViewControllerAnimated:YES completion:nil];
 }
 
+- (UIImage *)avatarImageForSaving {
+    if (_selectedAvatarImage) {
+        return _selectedAvatarImage;
+    }
+    if (_hasExistingAvatar) {
+        return [HangoTheme avatarImageForPersona:[HangoDataStore shared].currentPersona];
+    }
+    return nil;
+}
+
 - (void)saveTapped {
     NSString *name = [_nameField.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-    if (_selectedAvatarImage == nil) {
-        [self showAlertWithMessage:@"Please select an avatar."];
+    UIImage *avatar = [self avatarImageForSaving];
+    if (!avatar) {
+        [self showAlertWithText:@"Please select an avatar."];
         return;
     }
     if (name.length == 0) {
-        [self showAlertWithMessage:@"Please enter a username."];
+        [self showAlertWithText:@"Please enter a display name."];
         return;
     }
 
-    UIImage *avatar = _selectedAvatarImage;
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view operation:^id {
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:YES operation:^id {
         [[HangoSessionManager shared] updateProfileWithName:name avatarImage:avatar];
         return nil;
     } completion:^(__unused id result, __unused NSError *error) {
-        [HangoAppRouter showMainTabBarSelectingProfileTab];
+        if (self.editingExistingProfile) {
+            [MBProgressHUD showSuccessMessage:@"Profile updated"];
+            [self.navigationController popViewControllerAnimated:YES];
+            return;
+        }
+        [HangoAppRouter showMainTabBar];
     }];
 }
 
-- (void)showAlertWithMessage:(NSString *)message {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+- (void)showAlertWithText:(NSString *)text {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:text preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }

@@ -1,7 +1,7 @@
 #import "HangoBaseViewController.h"
 #import "HangoTheme.h"
 #import "HangoDesignKit.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 #import "HangoLoginPromptViewController.h"
 
 @interface HangoBaseViewController ()
@@ -22,7 +22,8 @@
     [self.view addSubview:self.contentView];
 
     [self.contentView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.edges.equalTo(self.view);
+        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop);
+        make.left.right.bottom.equalTo(self.view);
     }];
 
     [self setupUI];

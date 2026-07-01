@@ -1,13 +1,12 @@
 #import "HangoRequestManager.h"
-#import "HangoMockURLProtocol.h"
-#import <AFNetworking/AFNetworking.h>
-#import <MBProgressHUD/MBProgressHUD.h>
-
-static NSString * const kHangoMockBaseURLString = @"https://mock.hango.app/v1/";
+#import "HangoAppConfig.h"
+#import "HangoAPIURLProtocol.h"
+#import "HangoCrypto.h"
+#import "HangoHUD.h"
 
 @implementation HangoRequestManager {
-    AFHTTPSessionManager *_sessionManager;
-    __weak MBProgressHUD *_activeHUD;
+    NSURLSession *_session;
+    __weak HangoHUD *_activeHUD;
 }
 
 + (instancetype)shared {
@@ -23,14 +22,9 @@ static NSString * const kHangoMockBaseURLString = @"https://mock.hango.app/v1/";
     self = [super init];
     if (self) {
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
-        configuration.protocolClasses = @[[HangoMockURLProtocol class]];
-
-        NSURL *baseURL = [NSURL URLWithString:kHangoMockBaseURLString];
-        _sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:baseURL sessionConfiguration:configuration];
-        _sessionManager.requestSerializer = [AFJSONRequestSerializer serializer];
-        _sessionManager.responseSerializer = [AFJSONResponseSerializer serializer];
-        _sessionManager.responseSerializer.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/json", @"text/plain", nil];
-        _sessionManager.requestSerializer.timeoutInterval = 15;
+        configuration.protocolClasses = @[[HangoAPIURLProtocol class]];
+        configuration.timeoutIntervalForRequest = 15;
+        _session = [NSURLSession sessionWithConfiguration:configuration];
     }
     return self;
 }
@@ -69,8 +63,7 @@ static NSString * const kHangoMockBaseURLString = @"https://mock.hango.app/v1/";
     if (!container) {
         return;
     }
-    MBProgressHUD *hud = [MBProgressHUD showHUDAddedTo:container animated:YES];
-    hud.removeFromSuperViewOnHide = YES;
+    HangoHUD *hud = [HangoHUD showHUDAddedTo:container animated:YES];
     hud.labelText = @"";
     _activeHUD = hud;
 }
@@ -80,40 +73,135 @@ static NSString * const kHangoMockBaseURLString = @"https://mock.hango.app/v1/";
     _activeHUD = nil;
 }
 
+- (void)runLocalOperation:(id (^)(void))operation completion:(HangoRequestCompletion)completion {
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        id result = operation ? operation() : nil;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion(result, nil);
+            }
+        });
+    });
+}
+
+- (void)postJSONToPath:(NSString *)path
+            parameters:(NSDictionary *)parameters
+            completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
+    NSURL *baseURL = [NSURL URLWithString:HangoAPIBaseURLString];
+    NSURL *url = [NSURL URLWithString:path relativeToURL:baseURL];
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    request.HTTPMethod = @"POST";
+    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    if (parameters) {
+        request.HTTPBody = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:nil];
+    }
+    [[_session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (completion) {
+                    completion(nil, error);
+                }
+            });
+            return;
+        }
+        NSDictionary *json = nil;
+        if (data.length > 0) {
+            id object = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if ([object isKindOfClass:NSDictionary.class]) {
+                json = object;
+            }
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion(json, nil);
+            }
+        });
+    }] resume];
+}
+
 - (void)requestWithDelay:(NSTimeInterval)delay
                   inView:(UIView *)view
+                showsHUD:(BOOL)showsHUD
                operation:(id (^)(void))operation
               completion:(HangoRequestCompletion)completion {
+    if (!showsHUD) {
+        [self runLocalOperation:operation completion:completion];
+        return;
+    }
+
     NSTimeInterval actualDelay = [self normalizedDelay:delay];
     [self showHUDInView:view];
 
-    NSString *path = [NSString stringWithFormat:@"simulate?delay=%.2f", actualDelay];
-    [_sessionManager POST:path
-               parameters:@{}
-                  headers:nil
-                 progress:nil
-                  success:^(__unused NSURLSessionDataTask *task, __unused id responseObject) {
+    NSString *path = [NSString stringWithFormat:@"sync?delay=%.2f", actualDelay];
+    [self postJSONToPath:path parameters:@{} completion:^(NSDictionary *response, NSError *error) {
         [self hideHUD];
+        if (error) {
+            if (completion) {
+                completion(nil, error);
+            }
+            return;
+        }
         id result = operation ? operation() : nil;
         if (completion) {
             completion(result, nil);
-        }
-    } failure:^(__unused NSURLSessionDataTask *task, NSError *error) {
-        [self hideHUD];
-        if (completion) {
-            completion(nil, error);
         }
     }];
 }
 
 - (void)requestWithDelay:(NSTimeInterval)delay
                   inView:(UIView *)view
+                showsHUD:(BOOL)showsHUD
               completion:(dispatch_block_t)completion {
-    [self requestWithDelay:delay inView:view operation:^id {
+    [self requestWithDelay:delay inView:view showsHUD:showsHUD operation:^id {
         return nil;
     } completion:^(__unused id result, __unused NSError *error) {
         if (completion) {
             completion();
+        }
+    }];
+}
+
+- (void)verifyIAPPurchaseWithProductId:(NSString *)productId
+                         transactionId:(NSString *)transactionId
+                              sparkles:(NSInteger)sparkles
+                             personaId:(NSString *)personaId
+                            completion:(void (^)(BOOL, NSError *))completion {
+    NSInteger timestamp = (NSInteger)[[NSDate date] timeIntervalSince1970];
+    NSString *sign = [HangoCrypto iapSignWithPersonaId:personaId
+                                              productId:productId
+                                          transactionId:transactionId
+                                               sparkles:sparkles
+                                              timestamp:timestamp];
+    NSDictionary *parameters = @{
+        @"personaId": personaId ?: @"",
+        @"productId": productId ?: @"",
+        @"transactionId": transactionId ?: @"",
+        @"sparkles": @(sparkles),
+        @"timestamp": @(timestamp),
+        @"sign": sign ?: @"",
+    };
+
+    NSTimeInterval delay = [self normalizedDelay:0.75];
+    NSString *path = [NSString stringWithFormat:@"iap/verify?delay=%.2f", delay];
+    [self postJSONToPath:path parameters:parameters completion:^(NSDictionary *responseObject, NSError *error) {
+        if (error) {
+            if (completion) {
+                completion(NO, error);
+            }
+            return;
+        }
+        BOOL verified = NO;
+        NSNumber *code = responseObject[@"code"];
+        verified = code != nil && code.integerValue == 0;
+        if (completion) {
+            if (verified) {
+                completion(YES, nil);
+            } else {
+                NSError *verifyError = [NSError errorWithDomain:@"HangoIAP"
+                                                           code:2
+                                                       userInfo:@{NSLocalizedDescriptionKey: @"Receipt verification failed."}];
+                completion(NO, verifyError);
+            }
         }
     }];
 }

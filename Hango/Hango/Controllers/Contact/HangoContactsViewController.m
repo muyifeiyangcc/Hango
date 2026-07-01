@@ -3,12 +3,12 @@
 #import "HangoRequestManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import "HangoPrivateChatViewController.h"
+#import "HangoPrivateDialogueViewController.h"
 #import "HangoReportViewController.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
 @interface HangoContactCell : UITableViewCell
-@property (nonatomic, copy) dispatch_block_t onChatTapped;
+@property (nonatomic, copy) dispatch_block_t onDialogueTapped;
 @property (nonatomic, copy) dispatch_block_t onMoreTapped;
 - (void)configureWithContact:(HangoContact *)contact;
 @end
@@ -28,7 +28,7 @@
 
 - (void)prepareForReuse {
     [super prepareForReuse];
-    self.onChatTapped = nil;
+    self.onDialogueTapped = nil;
     self.onMoreTapped = nil;
 }
 
@@ -114,8 +114,8 @@
 }
 
 - (void)chatTapped {
-    if (self.onChatTapped) {
-        self.onChatTapped();
+    if (self.onDialogueTapped) {
+        self.onDialogueTapped();
     }
 }
 
@@ -135,7 +135,7 @@
     UIView *_searchWrap;
     UIView *_addOverlay;
     UIView *_addPanel;
-    UITextField *_friendIdField;
+    UITextField *_contactIdField;
     NSArray<HangoContact *> *_contacts;
     NSArray<HangoContact *> *_filtered;
 }
@@ -160,7 +160,7 @@
     [addBtn addTarget:self action:@selector(addContact) forControlEvents:UIControlEventTouchUpInside];
     [self.contentView addSubview:addBtn];
 
-    _searchWrap = [HangoDesignKit searchBarWithPlaceholder:@"Search friends"];
+    _searchWrap = [HangoDesignKit searchBarWithPlaceholder:@"Search contacts"];
     [self.contentView addSubview:_searchWrap];
 
     _tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
@@ -172,7 +172,7 @@
     [self.contentView addSubview:_tableView];
 
     [title mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(4);
+        make.top.equalTo(self.contentView).offset(8);
         make.left.equalTo(self.contentView).offset(20);
     }];
     [addBtn mas_makeConstraints:^(MASConstraintMaker *make) {
@@ -193,15 +193,20 @@
 
     UITextField *search = [_searchWrap viewWithTag:9001];
     [search addTarget:self action:@selector(searchChanged:) forControlEvents:UIControlEventEditingChanged];
-    [self setupAddFriendPanel];
+    [self setupAddContactPanel];
     [self loadContacts];
 }
 
-- (void)setupAddFriendPanel {
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self loadContacts];
+}
+
+- (void)setupAddContactPanel {
     _addOverlay = [[UIView alloc] init];
     _addOverlay.hidden = YES;
     _addOverlay.backgroundColor = [UIColor colorWithWhite:0 alpha:0.12];
-    UITapGestureRecognizer *dismissTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissAddFriendPanel)];
+    UITapGestureRecognizer *dismissTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissAddContactPanel)];
     [_addOverlay addGestureRecognizer:dismissTap];
     [self.view addSubview:_addOverlay];
 
@@ -212,18 +217,18 @@
     _addPanel.layer.borderColor = [HangoTheme primaryDarkColor].CGColor;
     [_addOverlay addSubview:_addPanel];
 
-    _friendIdField = [[UITextField alloc] init];
-    _friendIdField.placeholder = @"Enter your friend's ID";
-    _friendIdField.font = [HangoTheme bodyFont];
-    _friendIdField.textColor = [HangoTheme primaryDarkColor];
-    _friendIdField.keyboardType = UIKeyboardTypeNumberPad;
-    _friendIdField.borderStyle = UITextBorderStyleNone;
-    [_addPanel addSubview:_friendIdField];
+    _contactIdField = [[UITextField alloc] init];
+    _contactIdField.placeholder = @"Enter your contact's ID";
+    _contactIdField.font = [HangoTheme bodyFont];
+    _contactIdField.textColor = [HangoTheme primaryDarkColor];
+    _contactIdField.keyboardType = UIKeyboardTypeNumberPad;
+    _contactIdField.borderStyle = UITextBorderStyleNone;
+    [_addPanel addSubview:_contactIdField];
 
     UIButton *addActionBtn = [HangoDesignKit pillButtonWithTitle:@"Add" style:HangoPillButtonStyleAccent];
     addActionBtn.layer.cornerRadius = 18;
     addActionBtn.titleLabel.font = [UIFont boldSystemFontOfSize:14];
-    [addActionBtn addTarget:self action:@selector(confirmAddFriend) forControlEvents:UIControlEventTouchUpInside];
+    [addActionBtn addTarget:self action:@selector(confirmAddContact) forControlEvents:UIControlEventTouchUpInside];
     [_addPanel addSubview:addActionBtn];
 
     [_addOverlay mas_makeConstraints:^(MASConstraintMaker *make) {
@@ -235,7 +240,7 @@
         make.right.equalTo(self.contentView).offset(-16);
         make.height.mas_equalTo(52);
     }];
-    [_friendIdField mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_contactIdField mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.equalTo(_addPanel).offset(16);
         make.centerY.equalTo(_addPanel);
         make.right.equalTo(addActionBtn.mas_left).offset(-10);
@@ -249,7 +254,7 @@
 }
 
 - (void)loadContacts {
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view operation:^id {
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:NO operation:^id {
         return [HangoDataStore shared].contacts;
     } completion:^(id result, NSError *error) {
         self->_contacts = result;
@@ -271,61 +276,61 @@
 
 - (void)addContact {
     _addOverlay.hidden = NO;
-    _friendIdField.text = @"";
-    [_friendIdField becomeFirstResponder];
+    _contactIdField.text = @"";
+    [_contactIdField becomeFirstResponder];
 }
 
-- (void)dismissAddFriendPanel {
-    [_friendIdField resignFirstResponder];
+- (void)dismissAddContactPanel {
+    [_contactIdField resignFirstResponder];
     _addOverlay.hidden = YES;
 }
 
-- (void)confirmAddFriend {
-    NSString *friendId = [_friendIdField.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-    if (friendId.length == 0) {
-        [self showAlertWithMessage:@"Please enter your friend's ID."];
+- (void)confirmAddContact {
+    NSString *contactId = [_contactIdField.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (contactId.length == 0) {
+        [self showAlertWithText:@"Please enter your contact's ID."];
         return;
     }
 
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view operation:^id {
-        return @([[HangoDataStore shared] addFriendWithNumber:friendId]);
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:YES operation:^id {
+        return @([[HangoDataStore shared] addContactWithNumber:contactId]);
     } completion:^(id result, NSError *error) {
         NSInteger status = [result integerValue];
         if (status == 1) {
-            [self dismissAddFriendPanel];
+            [self dismissAddContactPanel];
             [self loadContacts];
             return;
         }
         if (status == 2) {
-            [self showAlertWithMessage:@"This friend is already in your contacts."];
+            [self showAlertWithText:@"This contact is already in your list."];
             return;
         }
-        [self showAlertWithMessage:@"No user found with this ID."];
+        [self showAlertWithText:@"No member found with this ID."];
     }];
 }
 
-- (void)showAlertWithMessage:(NSString *)message {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+- (void)showAlertWithText:(NSString *)text {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:text preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)openChatWithContact:(HangoContact *)contact {
-    HangoPrivateChatViewController *vc = [[HangoPrivateChatViewController alloc] init];
+- (void)openDialogueWithContact:(HangoContact *)contact {
+    HangoPrivateDialogueViewController *vc = [[HangoPrivateDialogueViewController alloc] init];
     vc.contact = contact;
     [self.navigationController pushViewController:vc animated:YES];
 }
 
 - (void)showMoreOptionsForContact:(HangoContact *)contact {
+    __weak typeof(self) weakSelf = self;
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     [sheet addAction:[UIAlertAction actionWithTitle:@"Report" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
         HangoReportViewController *vc = [[HangoReportViewController alloc] init];
         vc.contact = contact;
         [self.navigationController pushViewController:vc animated:YES];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Block" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
-        [[HangoDataStore shared] toggleBlacklistForContactId:contact.contactId];
-        [self loadContacts];
+    [sheet addAction:[UIAlertAction actionWithTitle:@"Deny" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+        [weakSelf confirmBlockContact:contact];
     }]];
     [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     if (sheet.popoverPresentationController) {
@@ -333,6 +338,24 @@
         sheet.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 1, 1);
     }
     [self presentViewController:sheet animated:YES completion:nil];
+}
+
+- (void)confirmBlockContact:(HangoContact *)contact {
+    if (contact.isDenied) {
+        [self showAlertWithText:@"This contact is already in the deny list."];
+        return;
+    }
+    NSString *message = [NSString stringWithFormat:@"Are you sure you want to add %@ to the deny list?", contact.name];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Add to Deny List?"
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    __weak typeof(self) weakSelf = self;
+    [alert addAction:[UIAlertAction actionWithTitle:@"Add" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+        [[HangoDataStore shared] addContactToDenyList:contact.contactId];
+        [weakSelf loadContacts];
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -344,8 +367,8 @@
     HangoContact *contact = _filtered[indexPath.row];
     [cell configureWithContact:contact];
     __weak typeof(self) weakSelf = self;
-    cell.onChatTapped = ^{
-        [weakSelf openChatWithContact:contact];
+    cell.onDialogueTapped = ^{
+        [weakSelf openDialogueWithContact:contact];
     };
     cell.onMoreTapped = ^{
         [weakSelf showMoreOptionsForContact:contact];

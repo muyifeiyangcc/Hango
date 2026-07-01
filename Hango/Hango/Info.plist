@@ -24,11 +24,5 @@
 			</array>
 		</dict>
 	</dict>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Hango needs access to your photo library to choose a profile avatar.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Hango needs access to your camera to take a profile avatar photo.</string>
 </dict>
 </plist>

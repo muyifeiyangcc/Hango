@@ -2,8 +2,8 @@
 #import "HangoRequestManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <MBProgressHUD+JDragon/MBProgressHUD+JDragon.h>
-#import <Masonry/Masonry.h>
+#import "HangoHUD.h"
+#import "Masonry.h"
 
 @implementation HangoForgotPasswordViewController {
     UIView *_emailWrap;
@@ -79,7 +79,7 @@
         return;
     }
 
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:YES completion:^{
         [MBProgressHUD showSuccessMessage:@"Password saved"];
         [self.navigationController popViewControllerAnimated:YES];
     }];

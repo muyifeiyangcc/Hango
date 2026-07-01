@@ -1,64 +1,52 @@
 #import "HangoTabRootViewController.h"
-#import "HangoCreatePartyViewController.h"
+#import "HangoMainTabBarController.h"
 #import "HangoTabBarView.h"
-#import <Masonry/Masonry.h>
+#import "Masonry.h"
 
-@interface HangoTabRootViewController ()
-@property (nonatomic, strong, readwrite) HangoTabBarView *tabBarView;
-@end
+static const CGFloat kHangoTabBarContentOverlap = 24.0;
 
 @implementation HangoTabRootViewController
+
+- (HangoTabBarView *)tabBarView {
+    if ([self.tabBarController isKindOfClass:HangoMainTabBarController.class]) {
+        return [(HangoMainTabBarController *)self.tabBarController customTabBarView];
+    }
+    return nil;
+}
+
+- (CGFloat)tabBarReservedHeight {
+    CGFloat safeBottom = self.view.safeAreaInsets.bottom;
+    if (safeBottom <= 0.0 && self.tabBarController.view) {
+        safeBottom = self.tabBarController.view.safeAreaInsets.bottom;
+    }
+    CGFloat width = CGRectGetWidth(self.view.bounds);
+    if (width <= 0.0 && self.tabBarController.view) {
+        width = CGRectGetWidth(self.tabBarController.view.bounds);
+    }
+    return [HangoTabBarView preferredHeightForWidth:width safeAreaBottom:safeBottom];
+}
 
 - (void)setupUI {
     [super setupUI];
     self.view.clipsToBounds = NO;
 
-    self.tabBarView = [[HangoTabBarView alloc] init];
-    __weak typeof(self) weakSelf = self;
-    self.tabBarView.onTabSelected = ^(HangoTabIndex index) {
-        [weakSelf handleTabSelection:index];
-    };
-    [self.view addSubview:self.tabBarView];
-    [self.tabBarView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.right.bottom.equalTo(self.view);
-        make.height.mas_equalTo([HangoTabBarView preferredHeightForSafeAreaBottom:0]);
-    }];
     [self.contentView mas_remakeConstraints:^(MASConstraintMaker *make) {
-        make.top.left.right.equalTo(self.view);
-        make.bottom.equalTo(self.tabBarView.mas_top).offset(22);
+        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop);
+        make.left.right.equalTo(self.view);
+        make.bottom.equalTo(self.view.mas_bottom).offset(-([self tabBarReservedHeight] - kHangoTabBarContentOverlap));
     }];
 }
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-    CGFloat height = [HangoTabBarView preferredHeightForSafeAreaBottom:self.view.safeAreaInsets.bottom];
-    [self.tabBarView mas_updateConstraints:^(MASConstraintMaker *make) {
-        make.height.mas_equalTo(height);
+    [self.contentView mas_updateConstraints:^(MASConstraintMaker *make) {
+        make.bottom.equalTo(self.view.mas_bottom).offset(-([self tabBarReservedHeight] - kHangoTabBarContentOverlap));
     }];
-    [self.tabBarView setNeedsLayout];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     [self.tabBarView setSelectedIndex:self.tabIndex animated:NO];
-}
-
-- (void)handleTabSelection:(HangoTabIndex)index {
-    if (index == self.tabIndex) return;
-    UITabBarController *tab = self.tabBarController;
-    if (!tab) return;
-
-    if (index == HangoTabIndexCreate) {
-        HangoCreatePartyViewController *create = [[HangoCreatePartyViewController alloc] init];
-        create.hidesBottomBarWhenPushed = NO;
-        [self.navigationController pushViewController:create animated:YES];
-        [self.tabBarView setSelectedIndex:self.tabIndex animated:NO];
-        return;
-    }
-
-    tab.selectedIndex = index;
-    UINavigationController *nav = tab.viewControllers[index];
-    [nav popToRootViewControllerAnimated:NO];
 }
 
 @end

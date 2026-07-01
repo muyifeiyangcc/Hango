@@ -5,7 +5,7 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 
 @interface HangoSessionManager ()
 @property (nonatomic, assign, readwrite) BOOL isLoggedIn;
-@property (nonatomic, strong, readwrite) HangoUser *currentUser;
+@property (nonatomic, strong, readwrite) HangoPersona *currentPersona;
 @end
 
 @implementation HangoSessionManager
@@ -22,7 +22,7 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _currentUser = [HangoDataStore shared].currentUser;
+        _currentPersona = [HangoDataStore shared].currentPersona;
         _isLoggedIn = [NSUserDefaults.standardUserDefaults boolForKey:kHangoIsLoggedInKey];
     }
     return self;
@@ -34,42 +34,65 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 }
 
 - (void)loginWithEmail:(NSString *)email password:(NSString *)password {
-    HangoUser *user = [HangoDataStore shared].currentUser;
+    (void)password;
+    HangoPersona *persona = [HangoDataStore shared].currentPersona;
     if (email.length) {
-        user.email = email;
+        persona.email = email;
     }
-    self.currentUser = user;
+    self.currentPersona = persona;
     self.isLoggedIn = YES;
+    [[HangoDataStore shared] persistCurrentPersonaProfile];
     [self persistLoginState];
 }
 
 - (void)registerWithEmail:(NSString *)email password:(NSString *)password {
-    HangoUser *user = [HangoDataStore shared].currentUser;
-    user.email = email.length ? email : user.email;
-    user.bio = @"";
-    [[HangoDataStore shared] clearSavedUserProfile];
-    self.currentUser = user;
+    HangoPersona *persona = [HangoDataStore shared].currentPersona;
+    persona.email = email.length ? email : persona.email;
+    persona.bio = @"";
+    [[HangoDataStore shared] clearSavedPersonaProfile];
+    persona.email = email.length ? email : persona.email;
+    [[HangoDataStore shared] assignPersonaIdForNewAccount];
+    self.currentPersona = persona;
+    self.isLoggedIn = YES;
+    [[HangoDataStore shared] persistCurrentPersonaProfile];
+    [self persistLoginState];
+}
+
+- (void)loginWithAppleCredentialIdentifier:(NSString *)personaIdentifier
+                               email:(nullable NSString *)email
+                         displayName:(nullable NSString *)displayName {
+    HangoDataStore *store = [HangoDataStore shared];
+    NSString *storedAppleId = [store appleCredentialIdentifier];
+    BOOL isDifferentAppleAccount = storedAppleId.length > 0 && ![storedAppleId isEqualToString:personaIdentifier];
+
+    if (![store hasPersistedPersonaProfile]) {
+        [store clearSavedPersonaProfile];
+        [store assignPersonaIdForNewAccount];
+    } else if (isDifferentAppleAccount) {
+        [store clearSavedPersonaProfile];
+        [store assignPersonaIdForNewAccount];
+    }
+
+    [store saveAppleSignInWithCredentialIdentifier:personaIdentifier email:email displayName:displayName];
+    self.currentPersona = store.currentPersona;
     self.isLoggedIn = YES;
     [self persistLoginState];
 }
 
 - (void)updateProfileWithName:(NSString *)name avatarName:(NSString *)avatarName bio:(NSString *)bio {
-    HangoUser *user = self.currentUser ?: [HangoDataStore shared].currentUser;
-    if (name.length) {
-        user.name = name;
-    }
-    if (avatarName.length) {
-        user.avatarName = avatarName;
-    }
-    if (bio.length) {
-        user.bio = bio;
-    }
-    self.currentUser = user;
+    [[HangoDataStore shared] updateCurrentPersonaProfileWithName:name
+                                                      avatarName:avatarName
+                                                     avatarImage:nil
+                                                             bio:bio];
+    self.currentPersona = [HangoDataStore shared].currentPersona;
 }
 
 - (void)updateProfileWithName:(NSString *)name avatarImage:(UIImage *)avatarImage {
-    [[HangoDataStore shared] updateCurrentUserProfileWithName:name avatarImage:avatarImage];
-    self.currentUser = [HangoDataStore shared].currentUser;
+    [[HangoDataStore shared] updateCurrentPersonaProfileWithName:name
+                                                      avatarName:nil
+                                                     avatarImage:avatarImage
+                                                             bio:nil];
+    self.currentPersona = [HangoDataStore shared].currentPersona;
 }
 
 - (void)logout {
@@ -78,8 +101,10 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 }
 
 - (void)deleteAccount {
+    [[HangoDataStore shared] clearSavedPersonaProfile];
+    [[HangoDataStore shared] clearAppleSignInCredentials];
     self.isLoggedIn = NO;
-    self.currentUser = nil;
+    self.currentPersona = nil;
     [self persistLoginState];
 }
 

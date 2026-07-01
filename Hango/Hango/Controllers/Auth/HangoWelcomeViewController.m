@@ -1,13 +1,19 @@
 #import "HangoWelcomeViewController.h"
 #import "HangoSignInViewController.h"
 #import "HangoSignUpViewController.h"
+#import "HangoProfileSetupViewController.h"
 #import "HangoEULAViewController.h"
+#import "HangoWebPageViewController.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
 #import "HangoRequestManager.h"
 #import "HangoAppRouter.h"
 #import "HangoSessionManager.h"
-#import <Masonry/Masonry.h>
+#import "HangoDataStore.h"
+#import "HangoLaunchPermissionManager.h"
+#import "HangoAppleSignInManager.h"
+#import <AuthenticationServices/AuthenticationServices.h>
+#import "Masonry.h"
 
 @implementation HangoWelcomeViewController {
     BOOL _agreed;
@@ -15,14 +21,8 @@
 }
 
 - (void)setupUI {
-    UIButton *eulaBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    eulaBtn.backgroundColor = [UIColor colorWithWhite:1 alpha:0.55];
-    eulaBtn.layer.cornerRadius = 16;
-    [eulaBtn setTitle:@"EULA" forState:UIControlStateNormal];
-    [eulaBtn setTitleColor:[HangoTheme primaryDarkColor] forState:UIControlStateNormal];
-    eulaBtn.titleLabel.font = [HangoTheme captionFont];
-    [eulaBtn addTarget:self action:@selector(openEULA) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:eulaBtn];
+    UIButton *termsBtn = [HangoDesignKit termsNavButtonWithTarget:self action:@selector(openEULA)];
+    [self.view addSubview:termsBtn];
 
     UIView *logoWrap = [[UIView alloc] init];
     logoWrap.backgroundColor = UIColor.whiteColor;
@@ -80,7 +80,7 @@
     UIView *agreeRow = [self agreementRow];
     [self.contentView addSubview:agreeRow];
 
-    [eulaBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+    [termsBtn mas_makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(8);
         make.right.equalTo(self.view).offset(-16);
         make.width.mas_equalTo(68);
@@ -200,7 +200,7 @@
     label.numberOfLines = 2;
     label.attributedText = [self agreementAttributedText];
     label.userInteractionEnabled = YES;
-    [label addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(openEULA)]];
+    [label addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(agreementLabelTapped:)]];
     [row addSubview:label];
 
     [_agreeCheck mas_makeConstraints:^(MASConstraintMaker *make) {
@@ -216,15 +216,15 @@
 }
 
 - (NSAttributedString *)agreementAttributedText {
-    NSString *text = @"Agree with User Agreement and Privacy Policy";
+    NSString *text = @"Agree with Member Agreement and Privacy Policy";
     NSMutableAttributedString *attr = [[NSMutableAttributedString alloc] initWithString:text attributes:@{
         NSFontAttributeName: [HangoTheme captionFont],
         NSForegroundColorAttributeName: [HangoTheme primaryDarkColor]
     }];
-    NSRange userRange = [text rangeOfString:@"User Agreement"];
+    NSRange agreementRange = [text rangeOfString:@"Member Agreement"];
     NSRange privacyRange = [text rangeOfString:@"Privacy Policy"];
-    if (userRange.location != NSNotFound) {
-        [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:userRange];
+    if (agreementRange.location != NSNotFound) {
+        [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:agreementRange];
     }
     if (privacyRange.location != NSNotFound) {
         [attr addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:privacyRange];
@@ -250,7 +250,7 @@
     if (_agreed) {
         return YES;
     }
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:@"Please agree to the User Agreement and Privacy Policy." preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:@"Please agree to the Member Agreement and Privacy Policy." preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
     return NO;
@@ -258,24 +258,102 @@
 
 - (void)loginTapped {
     if (![self ensureAgreed]) return;
-    [self.navigationController pushViewController:[[HangoSignInViewController alloc] init] animated:YES];
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [weakSelf.navigationController pushViewController:[[HangoSignInViewController alloc] init] animated:YES];
+    }];
 }
 
 - (void)signUpTapped {
     if (![self ensureAgreed]) return;
-    [self.navigationController pushViewController:[[HangoSignUpViewController alloc] init] animated:YES];
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [weakSelf.navigationController pushViewController:[[HangoSignUpViewController alloc] init] animated:YES];
+    }];
+}
+
+- (void)agreementLabelTapped:(UITapGestureRecognizer *)gesture {
+    UILabel *label = (UILabel *)gesture.view;
+    if (![label isKindOfClass:UILabel.class] || label.attributedText.length == 0) {
+        return;
+    }
+
+    NSString *text = label.attributedText.string;
+    NSRange agreementRange = [text rangeOfString:@"Member Agreement"];
+    NSRange privacyRange = [text rangeOfString:@"Privacy Policy"];
+    NSRange targetRange = [self rangeAtPoint:[gesture locationInView:label] inLabel:label];
+
+    if (agreementRange.location != NSNotFound && NSLocationInRange(targetRange.location, agreementRange)) {
+        [self openUserAgreement];
+        return;
+    }
+    if (privacyRange.location != NSNotFound && NSLocationInRange(targetRange.location, privacyRange)) {
+        [self openPrivacyPolicy];
+    }
+}
+
+- (NSRange)rangeAtPoint:(CGPoint)point inLabel:(UILabel *)label {
+    NSTextStorage *storage = [[NSTextStorage alloc] initWithAttributedString:label.attributedText];
+    NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
+    NSTextContainer *container = [[NSTextContainer alloc] initWithSize:label.bounds.size];
+    container.lineFragmentPadding = 0;
+    container.maximumNumberOfLines = label.numberOfLines;
+    container.lineBreakMode = label.lineBreakMode;
+    [layoutManager addTextContainer:container];
+    [storage addLayoutManager:layoutManager];
+
+    NSUInteger index = [layoutManager characterIndexForPoint:point inTextContainer:container fractionOfDistanceBetweenInsertionPoints:NULL];
+    if (index < label.attributedText.length) {
+        return NSMakeRange(index, 1);
+    }
+    return NSMakeRange(NSNotFound, 0);
 }
 
 - (void)openEULA {
     [self.navigationController pushViewController:[[HangoEULAViewController alloc] init] animated:YES];
 }
 
+- (void)openUserAgreement {
+    [self.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+}
+
+- (void)openPrivacyPolicy {
+    [self.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+}
+
 - (void)appleLogin {
     if (![self ensureAgreed]) return;
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
-        [[HangoSessionManager shared] loginWithEmail:@"" password:@""];
-        [HangoAppRouter showMainTabBar];
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [[HangoAppleSignInManager shared] signInFromViewController:weakSelf completion:^(BOOL success, NSError *error) {
+            if (!success) {
+                if (error.code != ASAuthorizationErrorCanceled) {
+                    NSString *message = error.localizedDescription.length > 0 ? error.localizedDescription : @"Apple sign-in failed.";
+                    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+                    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                    [weakSelf presentViewController:alert animated:YES completion:nil];
+                }
+                return;
+            }
+            [weakSelf navigateAfterAppleLogin];
+        }];
     }];
+}
+
+- (void)navigateAfterAppleLogin {
+    if ([[HangoDataStore shared] hasCompletedProfile]) {
+        [HangoAppRouter showMainTabBar];
+        return;
+    }
+
+    NSString *displayName = [[HangoDataStore shared] appleCachedDisplayName];
+    HangoProfileSetupViewController *profileVC = [[HangoProfileSetupViewController alloc] init];
+    profileVC.prefilledDisplayName = displayName;
+    profileVC.prefilledAvatarImage = [HangoAppleSignInManager avatarImageForDisplayName:displayName];
+    [self.navigationController pushViewController:profileVC animated:YES];
 }
 
 @end

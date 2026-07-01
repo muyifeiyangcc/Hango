@@ -1,12 +1,12 @@
 #import "HangoEditProfileViewController.h"
-#import "HangoUser.h"
+#import "HangoPersona.h"
 #import "HangoDataStore.h"
 #import "HangoSessionManager.h"
 #import "HangoRequestManager.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
-#import <MBProgressHUD+JDragon/MBProgressHUD+JDragon.h>
-#import <Masonry/Masonry.h>
+#import "HangoHUD.h"
+#import "Masonry.h"
 
 @implementation HangoEditProfileViewController {
     UIView *_nameWrap;
@@ -22,7 +22,7 @@
     title.textAlignment = NSTextAlignmentCenter;
     [self.contentView addSubview:title];
 
-    _avatarView = [HangoDesignKit avatarWithName:@"avatar_1" size:100 bordered:YES];
+    _avatarView = [HangoDesignKit avatarWithName:@"edit_avatar" size:100 bordered:YES];
     [self.contentView addSubview:_avatarView];
 
     _nameWrap = [HangoDesignKit inputFieldWithPlaceholder:@"Name" iconName:@"interface-user-single--close-geometric-human-person-single-up-user"];
@@ -79,21 +79,21 @@
 }
 
 - (void)loadProfile {
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
-        HangoUser *user = [HangoDataStore shared].currentUser;
-        self->_avatarView.image = [HangoTheme avatarImageForUser:user];
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:NO completion:^{
+        HangoPersona *persona = [HangoDataStore shared].currentPersona;
+        self->_avatarView.image = [HangoTheme avatarImageForPersona:persona];
         UITextField *name = [self->_nameWrap viewWithTag:9001];
         UITextField *email = [self->_emailWrap viewWithTag:9001];
-        name.text = user.name;
-        email.text = user.email;
-        self->_bioView.text = user.bio;
+        name.text = persona.name;
+        email.text = persona.email;
+        self->_bioView.text = persona.bio;
         self->_bioView.textColor = [HangoTheme primaryDarkColor];
     }];
 }
 
 - (void)save {
     UITextField *name = [_nameWrap viewWithTag:9001];
-    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view completion:^{
+    [[HangoRequestManager shared] requestWithDelay:0.75 inView:self.view showsHUD:YES completion:^{
         [[HangoSessionManager shared] updateProfileWithName:name.text avatarName:nil bio:self->_bioView.text];
         [MBProgressHUD showSuccessMessage:@"Profile updated"];
         [self.navigationController popViewControllerAnimated:YES];

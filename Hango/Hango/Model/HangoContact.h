@@ -8,7 +8,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *number;
 @property (nonatomic, copy) NSString *avatarName;
-@property (nonatomic, assign) BOOL isBlacklisted;
+@property (nonatomic, assign) BOOL isDenied;
 
 @end
 
