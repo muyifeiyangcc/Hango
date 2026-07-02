@@ -145,13 +145,9 @@ static void *kHangoHUDAssociationKey = &kHangoHUDAssociationKey;
 }
 
 + (void)showActivityMessageInWindow:(NSString *)message {
-    (void)message;
-    [self showToastWithMessage:@"Loading" style:@"activity"];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        UIWindow *window = [self keyWindow];
-        UIView *toast = [window viewWithTag:0x48414E48];
-        [toast removeFromSuperview];
-    });
+    [self hideHUD];
+    NSString *text = message.length > 0 ? message : @"Loading";
+    [self showToastWithMessage:text style:@"activity"];
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {

@@ -1,6 +1,8 @@
 #import "HangoAppRouter.h"
 #import "HangoMainTabBarController.h"
 #import "HangoWelcomeViewController.h"
+#import "HangoEULAViewController.h"
+#import "HangoEULAAcceptance.h"
 #import "HangoTabBarView.h"
 
 @implementation HangoAppRouter
@@ -14,6 +16,26 @@
         }
     }
     return UIApplication.sharedApplication.windows.firstObject;
+}
+
++ (UIViewController *)topViewController {
+    return [self topViewControllerFrom:[self keyWindow].rootViewController];
+}
+
++ (UIViewController *)topViewControllerFrom:(UIViewController *)viewController {
+    if (!viewController) {
+        return nil;
+    }
+    if (viewController.presentedViewController) {
+        return [self topViewControllerFrom:viewController.presentedViewController];
+    }
+    if ([viewController isKindOfClass:[UINavigationController class]]) {
+        return [self topViewControllerFrom:[(UINavigationController *)viewController topViewController]];
+    }
+    if ([viewController isKindOfClass:[UITabBarController class]]) {
+        return [self topViewControllerFrom:[(UITabBarController *)viewController selectedViewController]];
+    }
+    return viewController;
 }
 
 + (void)setRootViewController:(UIViewController *)viewController animated:(BOOL)animated {
@@ -54,10 +76,49 @@
     }
 }
 
-+ (void)showWelcome {
++ (UINavigationController *)welcomeNavigationController {
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:[[HangoWelcomeViewController alloc] init]];
     nav.navigationBarHidden = YES;
-    [self setRootViewController:nav animated:YES];
+    return nav;
+}
+
++ (UINavigationController *)launchEULANavigationController {
+    HangoEULAViewController *eula = [[HangoEULAViewController alloc] init];
+    eula.isLaunchGate = YES;
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:eula];
+    nav.navigationBarHidden = YES;
+    return nav;
+}
+
++ (UIViewController *)authEntryViewController {
+    if ([HangoEULAAcceptance hasAcceptedLaunchEULA]) {
+        return [self welcomeNavigationController];
+    }
+    return [self launchEULANavigationController];
+}
+
++ (void)showAuthEntry {
+    UIWindow *window = [self keyWindow];
+    if (!window) {
+        return;
+    }
+    UIViewController *root = window.rootViewController;
+    if (root.presentedViewController) {
+        [root dismissViewControllerAnimated:NO completion:nil];
+    }
+    [self setRootViewController:[self authEntryViewController] animated:YES];
+}
+
++ (void)showWelcome {
+    UIWindow *window = [self keyWindow];
+    if (!window) {
+        return;
+    }
+    UIViewController *root = window.rootViewController;
+    if (root.presentedViewController) {
+        [root dismissViewControllerAnimated:NO completion:nil];
+    }
+    [self setRootViewController:[self welcomeNavigationController] animated:YES];
 }
 
 @end

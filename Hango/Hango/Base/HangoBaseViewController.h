@@ -15,6 +15,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (UITextField *)styledTextFieldWithPlaceholder:(NSString *)placeholder icon:(NSString *)iconName;
 - (UITextView *)styledTextViewWithPlaceholder:(NSString *)placeholder;
 - (void)showLoginRequiredAlert;
+/// Returns YES when the action may proceed. Guests are sent to Welcome.
+- (BOOL)requireLoginForAction;
 
 @end
 

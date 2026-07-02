@@ -144,11 +144,10 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6NUFR97X3A;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hango/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requests camera access to take custom profile avatars and capture photos for uploading and sharing. All images you shoot stay locally on your device; uploading or sharing only happens with your clear approval.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app requests location access to provide personalized in-app services. Your location data is strictly confidential, collected only after you authorize access, and used exclusively to improve your experience inside the app.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app requests microphone access to record audio for voice chat features. Audio will only be recorded when you start a voice chat, and will never be stored, accessed or shared without your explicit consent.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app requests photo library access to select saved photos and videos for setting profile avatars or uploading to share. We only access media files you manually pick, and nothing will be uploaded or shared without your permission.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -165,7 +164,7 @@
 					"-framework",
 					StoreKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.myfy.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hango.hty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -187,11 +186,10 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6NUFR97X3A;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hango/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requests camera access to take custom profile avatars and capture photos for uploading and sharing. All images you shoot stay locally on your device; uploading or sharing only happens with your clear approval.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app requests location access to provide personalized in-app services. Your location data is strictly confidential, collected only after you authorize access, and used exclusively to improve your experience inside the app.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app requests microphone access to record audio for voice chat features. Audio will only be recorded when you start a voice chat, and will never be stored, accessed or shared without your explicit consent.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app requests photo library access to select saved photos and videos for setting profile avatars or uploading to share. We only access media files you manually pick, and nothing will be uploaded or shared without your permission.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -208,7 +206,7 @@
 					"-framework",
 					StoreKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.myfy.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hango.hty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

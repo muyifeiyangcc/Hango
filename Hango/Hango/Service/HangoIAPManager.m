@@ -1,6 +1,8 @@
+#import "HangoDisplayString.h"
 #import "HangoIAPManager.h"
 #import "HangoDataStore.h"
 #import "HangoRequestManager.h"
+#import "HangoHUD.h"
 #import <StoreKit/StoreKit.h>
 
 static NSDictionary<NSString *, NSNumber *> *HangoIAPSparkleMap(void) {
@@ -8,15 +10,39 @@ static NSDictionary<NSString *, NSNumber *> *HangoIAPSparkleMap(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         map = @{
-            @"lvbsvhxcgcrvesor": @(400),
-            @"dxismgcwewhrtezo": @(2450),
-            @"khtxlcejaxmqcsra": @(4900),
-            @"yadwwvxspgxwlndb": @(9800),
-            @"qnrcuelbtiuflyky": @(24500),
-            @"ymohxnvpkqxutvab": @(49000),
+            @"kuwifjdkwdvyeuex": @(400),
+            @"mekmbbtkjjxsvgyw": @(800),
+            @"hnqwpvmxzktrflcd": @(1780),
+            @"idaxswttnfhdisim": @(2450),
+            @"nwoglcwfvxqnygtk": @(5150),
+            @"prprpvxjuvecvsiq": @(10800),
+            @"qnrcuelbtiuflyky": @(14900),
+            @"gpsgwupyifxtvavf": @(29400),
+            @"ymohxnvpkqxutvab": @(34500),
+            @"keecuncsynldehal": @(63700),
         };
     });
     return map;
+}
+
+static void HangoIAPShowLoading(void) {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            HangoIAPShowLoading();
+        });
+        return;
+    }
+    [MBProgressHUD showActivityMessageInWindow:@"Processing..."];
+}
+
+static void HangoIAPHideLoading(void) {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            HangoIAPHideLoading();
+        });
+        return;
+    }
+    [MBProgressHUD hideHUD];
 }
 
 @interface HangoIAPManager () <SKProductsRequestDelegate, SKPaymentTransactionObserver>
@@ -94,13 +120,14 @@ static NSDictionary<NSString *, NSNumber *> *HangoIAPSparkleMap(void) {
     }
     if (![self canMakePayments]) {
         if (failure) {
-            failure([NSError errorWithDomain:@"HangoIAP" code:1 userInfo:@{NSLocalizedDescriptionKey: @"Purchases are disabled on this device."}]);
+            failure([NSError errorWithDomain:@"HangoIAP" code:1 userInfo:@{NSLocalizedDescriptionKey: HangoDisplayString(HangoDisplayStringKeyPurchasesDisabled)}]);
         }
         return;
     }
     self.pendingProductId = productId;
     self.purchaseSuccess = success;
     self.purchaseFailure = failure;
+    HangoIAPShowLoading();
     SKPayment *payment = [SKPayment paymentWithProductIdentifier:productId];
     [[SKPaymentQueue defaultQueue] addPayment:payment];
 }
@@ -150,6 +177,7 @@ static NSDictionary<NSString *, NSNumber *> *HangoIAPSparkleMap(void) {
 }
 
 - (void)completeTransaction:(SKPaymentTransaction *)transaction {
+    HangoIAPShowLoading();
     NSString *productId = transaction.payment.productIdentifier ?: self.pendingProductId ?: @"";
     NSInteger sparkles = [self sparklesForProductId:productId];
     NSString *personaId = [HangoDataStore shared].currentPersona.personaId ?: @"";
@@ -160,6 +188,7 @@ static NSDictionary<NSString *, NSNumber *> *HangoIAPSparkleMap(void) {
                                                        personaId:personaId
                                                       completion:^(BOOL verified, NSError *verifyError) {
         dispatch_async(dispatch_get_main_queue(), ^{
+            HangoIAPHideLoading();
             if (verified) {
                 if (self.purchaseSuccess) {
                     self.purchaseSuccess(sparkles);
@@ -179,13 +208,16 @@ static NSDictionary<NSString *, NSNumber *> *HangoIAPSparkleMap(void) {
 
 - (void)failedTransaction:(SKPaymentTransaction *)transaction {
     NSError *error = transaction.error;
-    if (self.purchaseFailure && error.code != SKErrorPaymentCancelled) {
-        self.purchaseFailure(error);
-    }
-    self.purchaseSuccess = nil;
-    self.purchaseFailure = nil;
-    self.pendingProductId = nil;
-    [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        HangoIAPHideLoading();
+        if (self.purchaseFailure && error.code != SKErrorPaymentCancelled) {
+            self.purchaseFailure(error);
+        }
+        self.purchaseSuccess = nil;
+        self.purchaseFailure = nil;
+        self.pendingProductId = nil;
+        [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
+    });
 }
 
 @end

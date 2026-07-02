@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 @class HangoPersona;
+@class HangoDialogueItem;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,6 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (UIFont *)bodyFont;
 + (UIFont *)monoFont;
 + (UIFont *)captionFont;
++ (UIFont *)linkLabelFont;
 
 + (CAGradientLayer *)backgroundGradientForBounds:(CGRect)bounds;
 + (void)applyGradientBackgroundToView:(UIView *)view;
@@ -29,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSString *)partyDisplayAvatarNameForHostName:(NSString *)hostName fallbackAvatarName:(NSString *)fallbackAvatarName;
 + (nullable UIImage *)avatarImageNamed:(NSString *)name;
 + (nullable UIImage *)avatarImageForPersona:(HangoPersona *)persona;
++ (nullable UIImage *)avatarImageForSenderName:(nullable NSString *)senderName senderAvatarName:(nullable NSString *)senderAvatarName;
++ (nullable UIImage *)avatarImageForDialogueItem:(HangoDialogueItem *)item;
 + (nullable UIImage *)resourceImageNamed:(NSString *)name;
 
 @end

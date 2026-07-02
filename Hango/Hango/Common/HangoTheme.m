@@ -1,5 +1,7 @@
 #import "HangoTheme.h"
 #import "HangoPersona.h"
+#import "HangoDialogueItem.h"
+#import "HangoDataStore.h"
 
 @implementation HangoTheme
 
@@ -49,6 +51,14 @@
 
 + (UIFont *)captionFont {
     return [UIFont systemFontOfSize:12.0];
+}
+
++ (UIFont *)linkLabelFont {
+    UIFont *jetbrains = [UIFont fontWithName:@"JetBrainsMono-Regular" size:14.0];
+    if (jetbrains) {
+        return jetbrains;
+    }
+    return [UIFont monospacedSystemFontOfSize:14.0 weight:UIFontWeightRegular];
 }
 
 + (CAGradientLayer *)backgroundGradientForBounds:(CGRect)bounds {
@@ -146,6 +156,31 @@
         return [self avatarImageNamed:persona.avatarName];
     }
     return nil;
+}
+
++ (UIImage *)avatarImageForSenderName:(NSString *)senderName senderAvatarName:(NSString *)senderAvatarName {
+    HangoPersona *persona = [HangoDataStore shared].currentPersona;
+    if (senderName.length > 0 && persona.name.length > 0 && [senderName isEqualToString:persona.name]) {
+        UIImage *personaImage = [self avatarImageForPersona:persona];
+        if (personaImage) {
+            return personaImage;
+        }
+    }
+    NSString *name = senderAvatarName.length > 0 ? senderAvatarName : senderName;
+    return [self avatarImageNamed:name];
+}
+
++ (UIImage *)avatarImageForDialogueItem:(HangoDialogueItem *)item {
+    if (!item) {
+        return nil;
+    }
+    if (item.isOutgoing) {
+        UIImage *personaImage = [self avatarImageForPersona:[HangoDataStore shared].currentPersona];
+        if (personaImage) {
+            return personaImage;
+        }
+    }
+    return [self avatarImageForSenderName:item.senderName senderAvatarName:item.senderAvatarName];
 }
 
 + (UIImage *)resourceImageNamed:(NSString *)name {

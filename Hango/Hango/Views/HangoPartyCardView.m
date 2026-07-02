@@ -4,13 +4,24 @@
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
 #import "HangoHUD.h"
-#import "Masonry.h"
+#import "HangoGuestGuard.h"
+#import "UIView+HangoViewController.h"
+#import "HGXAnchor.h"
 
-static NSString * const kHangoPartyAcceptIconPending = @"未接受聚会";
-static NSString * const kHangoPartyAcceptIconAccepted = @"已接受聚会";
+static NSString * const kHangoPartyAcceptIconPending = @"party_pending";
+static NSString * const kHangoPartyAcceptIconAccepted = @"party_accepted";
 static const NSTimeInterval kHangoPartyAcceptLoadingDuration = 0.3;
 static const CGFloat kHangoPartyAcceptButtonWidth = 88.0;
 static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
+static const CGFloat kHangoPartyInviteHorizontalInset = 16.0;
+static const CGFloat kHangoPartyInviteTextInsetH = 14.0;
+static const CGFloat kHangoPartyInviteTextInsetV = 10.0;
+static const CGFloat kHangoPartyCardCornerRadius = 20.0;
+static const CGFloat kHangoPartyCardVerticalInset = 20.0;
+static const CGFloat kHangoPartyTimeTopSpacing = 10.0;
+static const CGFloat kHangoPartyContentTopSpacing = 15.0;
+static const CGFloat kHangoPartyAddressTopSpacing = 15.0;
+static const CGFloat kHangoPartyAvatarsTopSpacing = 20.0;
 
 @interface HangoPartyCardView ()
 @property (nonatomic, copy) NSString *partyId;
@@ -25,9 +36,6 @@ static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
 
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
-    if (self) {
-        [HangoDesignKit applyCardShadow:self];
-    }
     return self;
 }
 
@@ -42,7 +50,8 @@ static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
     self.partyId = party.partyId;
     self.isAccepted = [[HangoDataStore shared] isPartyAccepted:party.partyId];
     self.backgroundColor = UIColor.whiteColor;
-    self.layer.cornerRadius = 18;
+    self.layer.cornerRadius = kHangoPartyCardCornerRadius;
+    self.clipsToBounds = YES;
 
     NSString *avatarName = [HangoTheme partyDisplayAvatarNameForHostName:party.hostName fallbackAvatarName:party.hostAvatarName];
     UIImageView *avatar = [HangoDesignKit avatarWithName:avatarName size:44 bordered:YES];
@@ -66,18 +75,21 @@ static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
     time.textColor = [HangoTheme secondaryTextColor];
     [self addSubview:time];
 
+    UIView *inviteBubble = [[UIView alloc] init];
+    inviteBubble.backgroundColor = [HangoTheme mintBubbleColor];
+    inviteBubble.layer.cornerRadius = 10;
+    inviteBubble.clipsToBounds = YES;
+    [self addSubview:inviteBubble];
+
     UILabel *invite = [[UILabel alloc] init];
-    invite.text = [NSString stringWithFormat:@"  %@  ", party.invitation];
+    invite.text = party.invitation;
     invite.font = [HangoTheme monoFont];
     invite.textColor = [HangoTheme primaryDarkColor];
     invite.numberOfLines = 0;
     invite.lineBreakMode = NSLineBreakByWordWrapping;
-    invite.backgroundColor = [HangoTheme mintBubbleColor];
-    invite.layer.cornerRadius = 10;
-    invite.clipsToBounds = YES;
-    [self addSubview:invite];
+    [inviteBubble addSubview:invite];
 
-    UIImageView *pin = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"地址图标"]];
+    UIImageView *pin = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"location_pin_icon"]];
     pin.contentMode = UIViewContentModeScaleAspectFit;
     [self addSubview:pin];
 
@@ -90,26 +102,7 @@ static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
     UIStackView *avatars = [[UIStackView alloc] init];
     avatars.axis = UILayoutConstraintAxisHorizontal;
     avatars.spacing = -10;
-    for (NSString *memberName in party.memberAvatarNames) {
-        NSString *memberAvatarName = [HangoTheme resolvedPartyAvatarName:memberName];
-        UIImageView *img = [HangoDesignKit avatarWithName:memberAvatarName size:30 bordered:YES];
-        [img mas_makeConstraints:^(MASConstraintMaker *make) { make.width.height.mas_equalTo(30); }];
-        [avatars addArrangedSubview:img];
-    }
-    if (party.extraMemberCount > 0) {
-        UILabel *extra = [[UILabel alloc] init];
-        extra.text = [NSString stringWithFormat:@"+%ld", (long)party.extraMemberCount];
-        extra.font = [UIFont boldSystemFontOfSize:11];
-        extra.textAlignment = NSTextAlignmentCenter;
-        extra.backgroundColor = [HangoTheme accentBlueColor];
-        extra.textColor = [HangoTheme primaryDarkColor];
-        extra.layer.cornerRadius = 15;
-        extra.clipsToBounds = YES;
-        extra.layer.borderWidth = 2;
-        extra.layer.borderColor = UIColor.whiteColor.CGColor;
-        [extra mas_makeConstraints:^(MASConstraintMaker *make) { make.width.height.mas_equalTo(30); }];
-        [avatars addArrangedSubview:extra];
-    }
+    [HangoDesignKit populatePartyMemberAvatarsInStack:avatars party:party size:30];
     [self addSubview:avatars];
 
     if (showsAcceptButton && !party.isHosted) {
@@ -117,44 +110,50 @@ static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
         [self addSubview:self.acceptButton];
     }
 
-    [avatar mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.left.equalTo(self).offset(14);
-        make.width.height.mas_equalTo(44);
+    [avatar hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(self).offset(kHangoPartyCardVerticalInset);
+        make.left.equalTo(self).offset(kHangoPartyInviteHorizontalInset);
+        make.width.height.hgx_equalTo(44);
     }];
-    [name mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(avatar).offset(2);
-        make.left.equalTo(avatar.mas_right).offset(10);
+    [name hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.centerY.equalTo(avatar);
+        make.left.equalTo(avatar.hgx_right).offset(10);
     }];
-    [time mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(name.mas_bottom).offset(2);
-        make.left.equalTo(name);
+    [time hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(avatar.hgx_bottom).offset(kHangoPartyTimeTopSpacing);
+        make.left.equalTo(avatar);
     }];
-    [invite mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(avatar.mas_bottom).offset(12);
-        make.left.equalTo(self).offset(14);
-        make.right.equalTo(self).offset(-14);
-        make.height.mas_greaterThanOrEqualTo(44);
+    [inviteBubble hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(time.hgx_bottom).offset(kHangoPartyContentTopSpacing);
+        make.left.equalTo(self).offset(kHangoPartyInviteHorizontalInset);
+        make.right.equalTo(self).offset(-kHangoPartyInviteHorizontalInset);
     }];
-    [pin mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(invite.mas_bottom).offset(10);
-        make.left.equalTo(invite);
-        make.width.height.mas_equalTo(14);
+    [invite hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(inviteBubble).offset(kHangoPartyInviteTextInsetV);
+        make.left.equalTo(inviteBubble).offset(kHangoPartyInviteTextInsetH);
+        make.right.equalTo(inviteBubble).offset(-kHangoPartyInviteTextInsetH);
+        make.bottom.equalTo(inviteBubble).offset(-kHangoPartyInviteTextInsetV);
     }];
-    [location mas_makeConstraints:^(MASConstraintMaker *make) {
+    [pin hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(inviteBubble.hgx_bottom).offset(kHangoPartyAddressTopSpacing);
+        make.left.equalTo(inviteBubble);
+        make.width.height.hgx_equalTo(14);
+    }];
+    [location hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.centerY.equalTo(pin);
-        make.left.equalTo(pin.mas_right).offset(4);
+        make.left.equalTo(pin.hgx_right).offset(4);
     }];
-    [avatars mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(pin.mas_bottom).offset(12);
-        make.left.equalTo(invite);
-        make.bottom.equalTo(self).offset(-14);
+    [avatars hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(location.hgx_bottom).offset(kHangoPartyAvatarsTopSpacing);
+        make.left.equalTo(inviteBubble);
+        make.bottom.equalTo(self).offset(-kHangoPartyCardVerticalInset);
     }];
     if (self.acceptButton) {
-        [self.acceptButton mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.right.equalTo(self).offset(-14);
+        [self.acceptButton hgx_makeConstraints:^(HGXConstraintMaker *make) {
+            make.right.equalTo(self).offset(-kHangoPartyInviteHorizontalInset);
             make.centerY.equalTo(avatars);
-            make.width.mas_equalTo(self.acceptButtonWidth);
-            make.height.mas_equalTo(self.acceptButtonHeight);
+            make.width.hgx_equalTo(self.acceptButtonWidth);
+            make.height.hgx_equalTo(self.acceptButtonHeight);
         }];
     }
 }
@@ -201,6 +200,9 @@ static const CGFloat kHangoPartyAcceptButtonHeight = 40.0;
 }
 
 - (void)acceptTapped {
+    if (![HangoGuestGuard requireLogin]) {
+        return;
+    }
     if (self.isAcceptLoading || self.partyId.length == 0) {
         return;
     }

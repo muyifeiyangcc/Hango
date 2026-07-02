@@ -5,10 +5,14 @@
 #import "HangoAlbumItem.h"
 #import "HangoContact.h"
 #import "HangoDialogueItem.h"
-#import "HangoWalletPackage.h"
+#import "HangovaluePackage.h"
 #import "HangoDialogueThread.h"
 
 NS_ASSUME_NONNULL_BEGIN
+
+FOUNDATION_EXPORT NSNotificationName const HangoDeniedContactsDidChangeNotification;
+FOUNDATION_EXPORT NSNotificationName const HangoDialogueDataDidChangeNotification;
+FOUNDATION_EXPORT NSNotificationName const HangoContactsDataDidChangeNotification;
 
 @interface HangoDataStore : NSObject
 
@@ -19,10 +23,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, readonly) NSArray<HangoParty *> *attendedParties;
 @property (nonatomic, copy, readonly) NSArray<HangoContact *> *contacts;
 @property (nonatomic, copy, readonly) NSArray<HangoContact *> *conversations;
-@property (nonatomic, copy, readonly) NSArray<HangoWalletPackage *> *walletPackages;
+@property (nonatomic, copy, readonly) NSArray<HangovaluePackage *> *valuePackages;
 @property (nonatomic, copy, readonly) NSArray<NSString *> *reportReasons;
 
 + (instancetype)shared;
+
+- (void)reloadDialogueDataForCurrentAccount;
+- (void)unloadDialogueDataForGuestSession;
+- (void)deletePersistedDialogueDataForCurrentAccount;
 
 - (NSArray<HangoDialogueItem *> *)dialogueItemsForConversationId:(NSString *)conversationId;
 - (NSArray<HangoDialogueItem *> *)dialogueItemsForPartyId:(NSString *)partyId;
@@ -43,6 +51,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)removeContactFromDenyList:(NSString *)contactId;
 - (NSArray<HangoContact *> *)deniedContacts;
 - (void)blockContactWithId:(NSString *)contactId;
+- (BOOL)isDeniedPersonWithName:(nullable NSString *)name avatarName:(nullable NSString *)avatarName;
+- (BOOL)isPartyHostDenied:(HangoParty *)party;
+- (NSArray<HangoContact *> *)visibleContacts;
+- (NSArray<HangoParty *> *)visibleUpcomingParties;
+- (NSArray<HangoParty *> *)visibleAttendedParties;
+- (NSArray<HangoAlbumItem *> *)visibleAlbumItems;
+- (NSArray<NSString *> *)visibleMemberAvatarNamesForParty:(HangoParty *)party;
 - (NSArray<HangoContact *> *)activeConversations;
 - (NSArray<HangoDialogueThread *> *)activeDialogueThreads;
 - (nullable HangoDialogueItem *)lastDialogueForConversationId:(NSString *)conversationId;
@@ -63,6 +78,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)loadSavedPersonaProfileIfNeeded;
 - (BOOL)hasCompletedProfile;
 - (BOOL)hasPersistedPersonaProfile;
+- (void)applySeedProfileForTestAccountWithEmail:(NSString *)email;
 
 - (nullable NSString *)appleCredentialIdentifier;
 - (nullable NSString *)appleCachedDisplayName;
@@ -78,8 +94,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable UIImage *)latestPartyRecordPhotoImageForPartyId:(NSString *)partyId;
 - (NSArray<UIImage *> *)partyRecordPhotoImagesForPartyId:(NSString *)partyId;
 - (NSString *)savePartyRecordPhotoImage:(UIImage *)image partyId:(NSString *)partyId;
+- (NSString *)saveConversationDialogueImage:(UIImage *)image conversationId:(NSString *)conversationId;
 - (BOOL)removePartyRecordPhotoAtIndex:(NSInteger)index partyId:(NSString *)partyId;
 - (BOOL)removePartyRecordPhotoAtDisplayIndex:(NSInteger)displayIndex partyId:(NSString *)partyId;
+- (BOOL)isCurrentUserPartyRecordPhotoAtDisplayIndex:(NSInteger)displayIndex partyId:(NSString *)partyId;
 
 - (NSInteger)decorationCountForName:(NSString *)name;
 - (void)addDecorationCount:(NSInteger)amount forName:(NSString *)name;

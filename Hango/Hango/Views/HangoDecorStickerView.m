@@ -1,5 +1,5 @@
 #import "HangoDecorStickerView.h"
-#import "Masonry.h"
+#import "HGXAnchor.h"
 
 @interface HangoDecorStickerView ()
 @property (nonatomic, assign) CGPoint panStartCenter;
@@ -27,10 +27,10 @@
         [_removeButton addTarget:self action:@selector(removeTapped) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_removeButton];
 
-        [_removeButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        [_removeButton hgx_makeConstraints:^(HGXConstraintMaker *make) {
             make.top.equalTo(self).offset(-4);
             make.right.equalTo(self).offset(4);
-            make.width.height.mas_equalTo(24);
+            make.width.height.hgx_equalTo(24);
         }];
     }
     return self;

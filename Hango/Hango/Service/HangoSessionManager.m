@@ -1,10 +1,15 @@
 #import "HangoSessionManager.h"
 #import "HangoDataStore.h"
+#import "HangoAccountStore.h"
+#import "HangoGuestGuard.h"
 
 static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
+static NSString * const kHangoIsGuestKey = @"HangoIsGuest";
+static NSString * const kHangoSavedPersonaEmailKey = @"HangoSavedPersonaEmail";
 
 @interface HangoSessionManager ()
 @property (nonatomic, assign, readwrite) BOOL isLoggedIn;
+@property (nonatomic, assign, readwrite) BOOL isGuest;
 @property (nonatomic, strong, readwrite) HangoPersona *currentPersona;
 @end
 
@@ -24,38 +29,93 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
     if (self) {
         _currentPersona = [HangoDataStore shared].currentPersona;
         _isLoggedIn = [NSUserDefaults.standardUserDefaults boolForKey:kHangoIsLoggedInKey];
+        _isGuest = [NSUserDefaults.standardUserDefaults boolForKey:kHangoIsGuestKey];
+        if (_isLoggedIn) {
+            _isGuest = NO;
+        }
     }
     return self;
 }
 
+- (void)persistSessionState {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    [defaults setBool:self.isLoggedIn forKey:kHangoIsLoggedInKey];
+    [defaults setBool:self.isGuest forKey:kHangoIsGuestKey];
+    [defaults synchronize];
+}
+
+- (void)clearGuestMode {
+    self.isGuest = NO;
+}
+
+- (void)enterGuestMode {
+    self.isGuest = YES;
+    self.isLoggedIn = NO;
+    [self persistSessionState];
+    [[HangoDataStore shared] unloadDialogueDataForGuestSession];
+}
+
+- (void)exitGuestMode {
+    [self clearGuestMode];
+    [self persistSessionState];
+}
+
++ (BOOL)requireAuthenticationFromViewController:(UIViewController *)viewController {
+    (void)viewController;
+    return [HangoGuestGuard requireLogin];
+}
+
 - (void)persistLoginState {
-    [NSUserDefaults.standardUserDefaults setBool:self.isLoggedIn forKey:kHangoIsLoggedInKey];
-    [NSUserDefaults.standardUserDefaults synchronize];
+    [self persistSessionState];
 }
 
-- (void)loginWithEmail:(NSString *)email password:(NSString *)password {
-    (void)password;
-    HangoPersona *persona = [HangoDataStore shared].currentPersona;
-    if (email.length) {
-        persona.email = email;
+- (BOOL)loginWithEmail:(NSString *)email password:(NSString *)password error:(NSError **)error {
+    if (![[HangoAccountStore shared] validateLoginWithEmail:email password:password error:error]) {
+        return NO;
     }
-    self.currentPersona = persona;
+
+    NSString *normalizedEmail = [[HangoAccountStore shared] normalizedEmail:email];
+    HangoDataStore *store = [HangoDataStore shared];
+    NSString *savedEmail = [NSUserDefaults.standardUserDefaults stringForKey:kHangoSavedPersonaEmailKey];
+    NSString *normalizedSavedEmail = savedEmail.length > 0 ? [[HangoAccountStore shared] normalizedEmail:savedEmail] : @"";
+
+    if (normalizedSavedEmail.length > 0 && ![normalizedSavedEmail isEqualToString:normalizedEmail]) {
+        [store clearSavedPersonaProfile];
+    }
+
+    [store loadSavedPersonaProfileIfNeeded];
+    store.currentPersona.email = normalizedEmail;
+    if ([[HangoAccountStore shared] isSeedTestAccountEmail:normalizedEmail]) {
+        [store applySeedProfileForTestAccountWithEmail:normalizedEmail];
+    }
+    self.currentPersona = store.currentPersona;
+    [self clearGuestMode];
     self.isLoggedIn = YES;
-    [[HangoDataStore shared] persistCurrentPersonaProfile];
+    [store persistCurrentPersonaProfile];
     [self persistLoginState];
+    [store reloadDialogueDataForCurrentAccount];
+    return YES;
 }
 
-- (void)registerWithEmail:(NSString *)email password:(NSString *)password {
-    HangoPersona *persona = [HangoDataStore shared].currentPersona;
-    persona.email = email.length ? email : persona.email;
+- (BOOL)registerWithEmail:(NSString *)email password:(NSString *)password error:(NSError **)error {
+    if (![[HangoAccountStore shared] registerEmail:email password:password error:error]) {
+        return NO;
+    }
+
+    NSString *normalizedEmail = [[HangoAccountStore shared] normalizedEmail:email];
+    HangoDataStore *store = [HangoDataStore shared];
+    [store clearSavedPersonaProfile];
+    HangoPersona *persona = store.currentPersona;
+    persona.email = normalizedEmail;
     persona.bio = @"";
-    [[HangoDataStore shared] clearSavedPersonaProfile];
-    persona.email = email.length ? email : persona.email;
-    [[HangoDataStore shared] assignPersonaIdForNewAccount];
+    [store assignPersonaIdForNewAccount];
     self.currentPersona = persona;
+    [self clearGuestMode];
     self.isLoggedIn = YES;
-    [[HangoDataStore shared] persistCurrentPersonaProfile];
+    [store persistCurrentPersonaProfile];
     [self persistLoginState];
+    [store reloadDialogueDataForCurrentAccount];
+    return YES;
 }
 
 - (void)loginWithAppleCredentialIdentifier:(NSString *)personaIdentifier
@@ -75,8 +135,10 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 
     [store saveAppleSignInWithCredentialIdentifier:personaIdentifier email:email displayName:displayName];
     self.currentPersona = store.currentPersona;
+    [self clearGuestMode];
     self.isLoggedIn = YES;
     [self persistLoginState];
+    [store reloadDialogueDataForCurrentAccount];
 }
 
 - (void)updateProfileWithName:(NSString *)name avatarName:(NSString *)avatarName bio:(NSString *)bio {
@@ -96,16 +158,23 @@ static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 }
 
 - (void)logout {
+    [self clearGuestMode];
     self.isLoggedIn = NO;
-    [self persistLoginState];
+    [self persistSessionState];
+    [[HangoDataStore shared] unloadDialogueDataForGuestSession];
 }
 
 - (void)deleteAccount {
+    NSString *email = self.currentPersona.email;
+    [[HangoAccountStore shared] removeAccountWithEmail:email];
+    [[HangoDataStore shared] deletePersistedDialogueDataForCurrentAccount];
     [[HangoDataStore shared] clearSavedPersonaProfile];
     [[HangoDataStore shared] clearAppleSignInCredentials];
+    [self clearGuestMode];
     self.isLoggedIn = NO;
     self.currentPersona = nil;
-    [self persistLoginState];
+    [self persistSessionState];
+    [[HangoDataStore shared] unloadDialogueDataForGuestSession];
 }
 
 @end

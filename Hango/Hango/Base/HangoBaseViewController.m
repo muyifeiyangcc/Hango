@@ -1,8 +1,8 @@
 #import "HangoBaseViewController.h"
 #import "HangoTheme.h"
 #import "HangoDesignKit.h"
-#import "Masonry.h"
-#import "HangoLoginPromptViewController.h"
+#import "HangoGuestGuard.h"
+#import "HGXAnchor.h"
 
 @interface HangoBaseViewController ()
 @property (nonatomic, strong, readwrite) UIView *contentView;
@@ -14,15 +14,19 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [HangoTheme backgroundTopColor];
-    [HangoTheme applyGradientBackgroundToView:self.view];
+    if ([self hangoShouldApplyRootBackground]) {
+        self.view.backgroundColor = [HangoTheme backgroundTopColor];
+        [HangoTheme applyGradientBackgroundToView:self.view];
+    } else {
+        self.view.backgroundColor = UIColor.clearColor;
+    }
 
     self.contentView = [[UIView alloc] init];
     self.contentView.backgroundColor = UIColor.clearColor;
     [self.view addSubview:self.contentView];
 
-    [self.contentView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop);
+    [self.contentView hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(self.view.hgx_safeAreaLayoutGuideTop);
         make.left.right.bottom.equalTo(self.view);
     }];
 
@@ -31,7 +35,9 @@
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-    [HangoTheme applyGradientBackgroundToView:self.view];
+    if ([self hangoShouldApplyRootBackground]) {
+        [HangoTheme applyGradientBackgroundToView:self.view];
+    }
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -49,10 +55,10 @@
         if (!self.backButton) {
             self.backButton = [HangoDesignKit backButtonWithTarget:self action:@selector(goBack)];
             [self.view addSubview:self.backButton];
-            [self.backButton mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(4);
+            [self.backButton hgx_makeConstraints:^(HGXConstraintMaker *make) {
+                make.top.equalTo(self.view.hgx_safeAreaLayoutGuideTop).offset(4);
                 make.left.equalTo(self.view).offset(12);
-                make.width.height.mas_equalTo(44);
+                make.width.height.hgx_equalTo(44);
             }];
         }
         self.backButton.hidden = NO;
@@ -73,8 +79,8 @@
         self.titleLabel.textColor = [HangoTheme primaryDarkColor];
         self.titleLabel.textAlignment = NSTextAlignmentCenter;
         [self.view addSubview:self.titleLabel];
-        [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop).offset(12);
+        [self.titleLabel hgx_makeConstraints:^(HGXConstraintMaker *make) {
+            make.top.equalTo(self.view.hgx_safeAreaLayoutGuideTop).offset(12);
             make.centerX.equalTo(self.view);
             make.left.greaterThanOrEqualTo(self.view).offset(60);
             make.right.lessThanOrEqualTo(self.view).offset(-60);
@@ -86,6 +92,10 @@
 
 - (void)setupUI {}
 - (void)layoutContent {}
+
+- (BOOL)hangoShouldApplyRootBackground {
+    return YES;
+}
 
 - (void)goBack {
     if (self.navigationController.viewControllers.count > 1) {
@@ -116,10 +126,11 @@
 }
 
 - (void)showLoginRequiredAlert {
-    HangoLoginPromptViewController *vc = [[HangoLoginPromptViewController alloc] init];
-    vc.modalPresentationStyle = UIModalPresentationOverFullScreen;
-    vc.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
-    [self presentViewController:vc animated:YES completion:nil];
+    [HangoGuestGuard requireLogin];
+}
+
+- (BOOL)requireLoginForAction {
+    return [HangoGuestGuard requireLogin];
 }
 
 @end

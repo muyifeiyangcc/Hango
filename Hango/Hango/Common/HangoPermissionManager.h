@@ -6,7 +6,6 @@ typedef NS_ENUM(NSInteger, HangoPermissionType) {
     HangoPermissionTypeCamera,
     HangoPermissionTypePhotoLibrary,
     HangoPermissionTypeMicrophone,
-    HangoPermissionTypeLocation,
 };
 
 typedef void (^HangoPermissionHandler)(BOOL granted);

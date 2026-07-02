@@ -3,11 +3,12 @@
 #import "HangoVoiceNoteManager.h"
 #import "HangoPermissionManager.h"
 #import <AVFoundation/AVFoundation.h>
-#import "Masonry.h"
+#import "HGXAnchor.h"
 
 @interface HangoDialogueInputBar ()
 @property (nonatomic, strong) NSMutableArray<UIView *> *textModeViews;
 @property (nonatomic, strong) UIView *voiceModeView;
+@property (nonatomic, strong) UIButton *voiceBackToTextButton;
 @property (nonatomic, strong) UIButton *voiceSendButton;
 @property (nonatomic, strong) UIView *voiceGlowView;
 @property (nonatomic, strong) UILabel *voiceHintLabel;
@@ -21,10 +22,16 @@
 
 @implementation HangoDialogueInputBar
 
+static const CGFloat kHangoVoiceSendButtonSize = 136.0;
+static const CGFloat kHangoVoiceBackgroundSize = 188.0;
+static const CGFloat kHangoVoiceGlowSize = 124.0;
+static const CGFloat kHangoVoiceMicSize = 42.0;
+
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
         self.backgroundColor = UIColor.clearColor;
+        self.clipsToBounds = NO;
         self.textModeViews = [NSMutableArray array];
 
         UIButton *voice = [self roundIcon:@"chat_voice_icon_black" fallback:@"private_chat_voice" action:@selector(voiceTapped)];
@@ -53,30 +60,30 @@
         [send addTarget:self action:@selector(sendTapped) forControlEvents:UIControlEventTouchUpInside];
         [fieldWrap addSubview:send];
 
-        [voice mas_makeConstraints:^(MASConstraintMaker *make) {
+        [voice hgx_makeConstraints:^(HGXConstraintMaker *make) {
             make.left.equalTo(self).offset(8);
             make.centerY.equalTo(self);
-            make.width.height.mas_equalTo(44);
+            make.width.height.hgx_equalTo(44);
         }];
-        [photo mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.left.equalTo(voice.mas_right).offset(8);
+        [photo hgx_makeConstraints:^(HGXConstraintMaker *make) {
+            make.left.equalTo(voice.hgx_right).offset(8);
             make.centerY.width.height.equalTo(voice);
         }];
-        [fieldWrap mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.left.equalTo(photo.mas_right).offset(8);
+        [fieldWrap hgx_makeConstraints:^(HGXConstraintMaker *make) {
+            make.left.equalTo(photo.hgx_right).offset(8);
             make.right.equalTo(self).offset(-8);
             make.centerY.equalTo(self);
-            make.height.mas_equalTo(48);
+            make.height.hgx_equalTo(48);
         }];
-        [_textField mas_makeConstraints:^(MASConstraintMaker *make) {
+        [_textField hgx_makeConstraints:^(HGXConstraintMaker *make) {
             make.left.equalTo(fieldWrap).offset(14);
             make.centerY.equalTo(fieldWrap);
-            make.right.equalTo(send.mas_left).offset(-4);
+            make.right.equalTo(send.hgx_left).offset(-4);
         }];
-        [send mas_makeConstraints:^(MASConstraintMaker *make) {
+        [send hgx_makeConstraints:^(HGXConstraintMaker *make) {
             make.right.equalTo(fieldWrap).offset(-10);
             make.centerY.equalTo(fieldWrap);
-            make.width.height.mas_equalTo(28);
+            make.width.height.hgx_equalTo(28);
         }];
 
         [self buildVoiceModeView];
@@ -102,6 +109,7 @@
 - (void)buildVoiceModeView {
     _voiceModeView = [[UIView alloc] init];
     _voiceModeView.hidden = YES;
+    _voiceModeView.clipsToBounds = NO;
     [self addSubview:_voiceModeView];
 
     _voiceHintLabel = [[UILabel alloc] init];
@@ -111,10 +119,18 @@
     _voiceHintLabel.textAlignment = NSTextAlignmentCenter;
     [_voiceModeView addSubview:_voiceHintLabel];
 
+    _voiceBackToTextButton = [self roundIcon:@"voice_back_to_text" fallback:nil action:@selector(backToTextTapped)];
+    [_voiceModeView addSubview:_voiceBackToTextButton];
+
+    UIImageView *background = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"voice_message_background"]];
+    background.contentMode = UIViewContentModeScaleAspectFit;
+    background.userInteractionEnabled = NO;
+    [_voiceModeView addSubview:background];
+
     _voiceGlowView = [[UIView alloc] init];
     _voiceGlowView.backgroundColor = [HangoTheme accentBlueColor];
     _voiceGlowView.alpha = 0.0;
-    _voiceGlowView.layer.cornerRadius = 54;
+    _voiceGlowView.layer.cornerRadius = kHangoVoiceGlowSize * 0.5;
     _voiceGlowView.userInteractionEnabled = NO;
     [_voiceModeView addSubview:_voiceGlowView];
 
@@ -124,39 +140,40 @@
     [_voiceSendButton addTarget:self action:@selector(voicePressReleased) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
     [_voiceModeView addSubview:_voiceSendButton];
 
-    UIImageView *background = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"voice_message_background"]];
-    background.contentMode = UIViewContentModeScaleAspectFit;
-    background.userInteractionEnabled = NO;
-    [_voiceSendButton addSubview:background];
-
     UIImageView *mic = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"voice_message_microphone"]];
     mic.contentMode = UIViewContentModeScaleAspectFit;
     mic.userInteractionEnabled = NO;
     [_voiceSendButton addSubview:mic];
 
-    [_voiceModeView mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_voiceModeView hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.edges.equalTo(self);
     }];
-    [_voiceHintLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_voiceBackToTextButton hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.left.equalTo(_voiceModeView).offset(8);
+        make.centerY.equalTo(_voiceSendButton);
+        make.width.height.hgx_equalTo(44);
+    }];
+    [_voiceHintLabel hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.centerX.equalTo(_voiceModeView);
-        make.bottom.equalTo(_voiceSendButton.mas_top).offset(2);
+        make.bottom.equalTo(_voiceSendButton.hgx_top).offset(2);
     }];
-    [_voiceGlowView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.center.equalTo(_voiceSendButton);
-        make.width.height.mas_equalTo(108);
-    }];
-    [_voiceSendButton mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_voiceSendButton hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.centerX.equalTo(_voiceModeView);
         make.bottom.equalTo(_voiceModeView).offset(-8);
-        make.width.height.mas_equalTo(136);
+        make.width.height.hgx_equalTo(kHangoVoiceSendButtonSize);
     }];
-    [background mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.edges.equalTo(_voiceSendButton);
+    [background hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.center.equalTo(_voiceSendButton);
+        make.width.height.hgx_equalTo(kHangoVoiceBackgroundSize);
     }];
-    [mic mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_voiceGlowView hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.center.equalTo(_voiceSendButton);
+        make.width.height.hgx_equalTo(kHangoVoiceGlowSize);
+    }];
+    [mic hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.centerX.equalTo(_voiceSendButton);
-        make.centerY.equalTo(_voiceSendButton).offset(0);
-        make.width.height.mas_equalTo(42);
+        make.centerY.equalTo(_voiceSendButton).offset(7);
+        make.width.height.hgx_equalTo(kHangoVoiceMicSize);
     }];
 }
 
@@ -277,6 +294,10 @@
             weakSelf.onVoice();
         }
     }];
+}
+
+- (void)backToTextTapped {
+    [self setVoiceMode:NO animated:YES];
 }
 
 - (void)setVoiceMode:(BOOL)voiceMode animated:(BOOL)animated {

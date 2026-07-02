@@ -1,5 +1,7 @@
+#import "HangoDisplayString.h"
 #import "HangoDataStore.h"
 #import "HangoTheme.h"
+#import "HangoAccountStore.h"
 
 static NSString * const kHangoSavedPersonaNameKey = @"HangoSavedPersonaName";
 static NSString * const kHangoSavedPersonaEmailKey = @"HangoSavedPersonaEmail";
@@ -16,13 +18,17 @@ static NSString * const kHangoSavedContactsKey = @"HangoSavedContacts";
 static NSString * const kHangoDefaultContactsSeededKey = @"HangoDefaultContactsSeeded_v1";
 static NSString * const kHangoSavedHostedPartiesKey = @"HangoSavedHostedParties";
 static NSString * const kHangoSeedPartySchedulesKey = @"HangoSeedPartySchedules";
+static NSString * const kHangoIsLoggedInKey = @"HangoIsLoggedIn";
 static NSString * const kHangoConversationDialogueKey = @"HangoConversationDialogue";
 static NSString * const kHangoConversationContactIdsKey = @"HangoConversationContactIds";
 static NSString * const kHangoPartyDialogueKey = @"HangoPartyDialogue";
 static NSString * const kHangoPartyConversationIdsKey = @"HangoPartyConversationIds";
 static NSString * const kHangoDialogueThreadOrderKey = @"HangoDialogueThreadOrder";
+static NSString * const kHangoDialogueLegacyMigratedPrefix = @"HangoDialogueLegacyMigrated.";
+static NSString * const kHangoContactsLegacyMigratedPrefix = @"HangoContactsLegacyMigrated.";
 static NSString * const kHangoPartyRecordPhotosKey = @"HangoPartyRecordPhotos";
 static NSString * const kHangoPartyPhotosFolderName = @"HangoPartyPhotos";
+static NSString * const kHangoDialogueImagesFolderName = @"HangoDialogueImages";
 static NSString * const kHangoDecorationCountsKey = @"HangoDecorationCounts";
 static NSString * const kHangoAcceptedPartyIdsKey = @"HangoAcceptedPartyIds";
 static NSString * const kHangoAttendedPartyPhotosSeedKey = @"HangoAttendedPartyPhotosSeed_v2";
@@ -35,6 +41,10 @@ static const NSInteger kHangoBasePersonaId = 100005131;
 static const NSInteger kHangoDecorationPurchasePackSize = 50;
 static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 
+NSNotificationName const HangoDeniedContactsDidChangeNotification = @"HangoDeniedContactsDidChangeNotification";
+NSNotificationName const HangoDialogueDataDidChangeNotification = @"HangoDialogueDataDidChangeNotification";
+NSNotificationName const HangoContactsDataDidChangeNotification = @"HangoContactsDataDidChangeNotification";
+
 @interface HangoDataStore ()
 @property (nonatomic, strong, readwrite) HangoPersona *currentPersona;
 @property (nonatomic, copy, readwrite) NSArray<HangoAlbumItem *> *albumItems;
@@ -44,7 +54,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 @property (nonatomic, copy, readwrite) NSArray<HangoContact *> *contacts;
 @property (nonatomic, copy, readwrite) NSArray<HangoContact *> *conversations;
 @property (nonatomic, copy) NSArray<HangoContact *> *directoryContacts;
-@property (nonatomic, copy, readwrite) NSArray<HangoWalletPackage *> *walletPackages;
+@property (nonatomic, copy, readwrite) NSArray<HangovaluePackage *> *valuePackages;
 @property (nonatomic, copy, readwrite) NSArray<NSString *> *reportReasons;
 @property (nonatomic, strong) NSMutableArray<NSString *> *conversationContactIds;
 @property (nonatomic, strong) NSMutableArray<NSString *> *partyConversationPartyIds;
@@ -134,7 +144,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
                                            dateText:@"Jul 4th 2026"
                                            location:@"Central Street BBQ Restaurant"
                                         invitation:@"Hey guys! Let's grab BBQ this Friday night. Free drinks prepared, come hang out with me!"
-                                      coverImageName:@"派对1.1"
+                                      coverImageName:@"party_record_1_1"
                                   memberAvatarNames:@[@"Palmer", @"Dillon", @"Lillie", @"Sophia"]
                                    extraMemberCount:5
                                            isHosted:NO
@@ -147,7 +157,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
                                            dateText:@"Jul 12th 2026"
                                            location:@"Riverside Cycling Park Entrance"
                                         invitation:@"Weekend riding plan! We'll cycle along the river then have picnic together. Bring your bike and sunscreen!"
-                                      coverImageName:@"派对2.1"
+                                      coverImageName:@"party_record_2_1"
                                   memberAvatarNames:@[@"Norris", @"Dillon", @"Palmer", @"Sophia"]
                                    extraMemberCount:5
                                            isHosted:NO
@@ -160,7 +170,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
                                            dateText:@"Jul 8th 2026"
                                            location:@"My home cinema room"
                                         invitation:@"Movie marathon night! New horror & comedy films ready, popcorn and cola all set. Come chill after work!"
-                                      coverImageName:@"派对3.1"
+                                      coverImageName:@"party_record_3_1"
                                   memberAvatarNames:@[@"Palmer", @"Norris", @"Faith", @"Sophia"]
                                    extraMemberCount:5
                                            isHosted:NO
@@ -173,7 +183,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
                                            dateText:@"Jul 15th 2026"
                                            location:@"West Coast Beach"
                                         invitation:@"Watch sunset by the sea together! I bring wine and snacks, let's relax and take nice photos."
-                                      coverImageName:@"派对4.1"
+                                      coverImageName:@"party_record_4_1"
                                   memberAvatarNames:@[@"Palmer", @"Norris", @"Dillon", @"Faith"]
                                    extraMemberCount:5
                                            isHosted:NO
@@ -194,13 +204,12 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 
     NSMutableArray *contacts = [NSMutableArray array];
     NSArray *names = @[@"Palmer", @"Norris", @"Dillon", @"Lillie", @"Sophia", @"Faith"];
-    NSArray *numbers = @[@"123456", @"234567", @"345678", @"456789", @"567890", @"678901"];
     NSArray *avatars = @[@"Palmer", @"Norris", @"Dillon", @"Lillie", @"Sophia", @"Faith"];
     for (NSInteger i = 0; i < names.count; i++) {
         HangoContact *contact = [[HangoContact alloc] init];
         contact.contactId = [NSString stringWithFormat:@"contact_%ld", (long)i];
         contact.name = names[i];
-        contact.number = numbers[i];
+        contact.number = @(kHangoBasePersonaId + i).stringValue;
         contact.avatarName = avatars[i];
         contact.isDenied = NO;
         [contacts addObject:contact];
@@ -211,19 +220,22 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     self.conversationContactIds = [NSMutableArray array];
     self.partyConversationPartyIds = [NSMutableArray array];
     self.dialogueThreadOrder = [NSMutableArray array];
-    [self loadDenyListedContactIds];
+    self.deniedContactIds = [NSMutableSet set];
     [self loadAcceptedPartyIds];
-    [self loadSavedContacts];
     [self loadSavedHostedParties];
     [self rebuildUpcomingPartiesList];
 
-    self.walletPackages = @[
-        [self packageWithProductId:@"lvbsvhxcgcrvesor" sparkles:400 price:@"$0.99"],
-        [self packageWithProductId:@"dxismgcwewhrtezo" sparkles:2450 price:@"$4.99"],
-        [self packageWithProductId:@"khtxlcejaxmqcsra" sparkles:4900 price:@"$9.99"],
-        [self packageWithProductId:@"yadwwvxspgxwlndb" sparkles:9800 price:@"$19.99"],
-        [self packageWithProductId:@"qnrcuelbtiuflyky" sparkles:24500 price:@"$39.99"],
-        [self packageWithProductId:@"ymohxnvpkqxutvab" sparkles:49000 price:@"$79.99"],
+    self.valuePackages = @[
+        [self packageWithProductId:@"kuwifjdkwdvyeuex" sparkles:400 price:@"$0.99"],
+        [self packageWithProductId:@"mekmbbtkjjxsvgyw" sparkles:800 price:@"$1.99"],
+        [self packageWithProductId:@"hnqwpvmxzktrflcd" sparkles:1780 price:@"$3.99"],
+        [self packageWithProductId:@"idaxswttnfhdisim" sparkles:2450 price:@"$4.99"],
+        [self packageWithProductId:@"nwoglcwfvxqnygtk" sparkles:5150 price:@"$9.99"],
+        [self packageWithProductId:@"prprpvxjuvecvsiq" sparkles:10800 price:@"$19.99"],
+        [self packageWithProductId:@"qnrcuelbtiuflyky" sparkles:14900 price:@"$29.99"],
+        [self packageWithProductId:@"gpsgwupyifxtvavf" sparkles:29400 price:@"$49.99"],
+        [self packageWithProductId:@"ymohxnvpkqxutvab" sparkles:34500 price:@"$69.99"],
+        [self packageWithProductId:@"keecuncsynldehal" sparkles:63700 price:@"$99.99"],
     ];
 
     self.reportReasons = @[
@@ -235,15 +247,14 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 
     self.conversationDialogueItems = [NSMutableDictionary dictionary];
     self.partyDialogueItems = [NSMutableDictionary dictionary];
-    [self loadSavedConversationDialogueItems];
-    [self loadSavedPartyDialogueItems];
+    [self clearInMemoryDialogueData];
+    if ([NSUserDefaults.standardUserDefaults boolForKey:kHangoIsLoggedInKey]) {
+        [self reloadDialogueDataForCurrentAccount];
+    }
     [self loadPartyRecordPhotos];
     [self loadHiddenBuiltinPartyPhotos];
     [self seedAttendedPartyRecordPhotosIfNeeded];
     [self loadDecorationCounts];
-
-    [self seedDialogueItemsForPartyId:@"party_1"];
-    [self seedDialogueItemsForPartyId:@"party_3"];
     [self syncHostedPartyCount];
 }
 
@@ -437,8 +448,8 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     }
 }
 
-- (HangoWalletPackage *)packageWithProductId:(NSString *)productId sparkles:(NSInteger)sparkles price:(NSString *)price {
-    HangoWalletPackage *pkg = [[HangoWalletPackage alloc] init];
+- (HangovaluePackage *)packageWithProductId:(NSString *)productId sparkles:(NSInteger)sparkles price:(NSString *)price {
+    HangovaluePackage *pkg = [[HangovaluePackage alloc] init];
     pkg.packageId = productId;
     pkg.productId = productId;
     pkg.sparkles = sparkles;
@@ -497,12 +508,122 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     return dialogueItem;
 }
 
+- (BOOL)isDeniedPersonWithName:(NSString *)name avatarName:(NSString *)avatarName {
+    for (NSString *contactId in self.deniedContactIds) {
+        HangoContact *contact = [self contactWithId:contactId];
+        if (!contact) {
+            continue;
+        }
+        if (name.length > 0 && contact.name.length > 0 && [contact.name isEqualToString:name]) {
+            return YES;
+        }
+        if (avatarName.length > 0 && contact.avatarName.length > 0 && [contact.avatarName isEqualToString:avatarName]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (BOOL)isDeniedDialogueItem:(HangoDialogueItem *)item {
+    if (!item || item.isOutgoing) {
+        return NO;
+    }
+    return [self isDeniedPersonWithName:item.senderName avatarName:item.senderAvatarName];
+}
+
+- (NSArray<HangoDialogueItem *> *)filteredDialogueItems:(NSArray<HangoDialogueItem *> *)items {
+    if (items.count == 0) {
+        return @[];
+    }
+    NSMutableArray<HangoDialogueItem *> *result = [NSMutableArray arrayWithCapacity:items.count];
+    for (HangoDialogueItem *item in items) {
+        if (![self isDeniedDialogueItem:item]) {
+            [result addObject:item];
+        }
+    }
+    return result.copy;
+}
+
+- (BOOL)isPartyHostDenied:(HangoParty *)party {
+    if (!party) {
+        return NO;
+    }
+    return [self isDeniedPersonWithName:party.hostName avatarName:party.hostAvatarName];
+}
+
+- (NSArray<HangoParty *> *)visiblePartiesFromArray:(NSArray<HangoParty *> *)parties {
+    NSMutableArray<HangoParty *> *result = [NSMutableArray array];
+    for (HangoParty *party in parties) {
+        if (![self isPartyHostDenied:party]) {
+            [result addObject:party];
+        }
+    }
+    return result.copy;
+}
+
+- (NSArray<HangoContact *> *)visibleContacts {
+    if (![self canAccessDialogueData]) {
+        return @[];
+    }
+    NSMutableArray<HangoContact *> *result = [NSMutableArray array];
+    for (HangoContact *contact in self.contacts) {
+        if (!contact.isDenied) {
+            [result addObject:contact];
+        }
+    }
+    return result.copy;
+}
+
+- (NSArray<HangoParty *> *)visibleUpcomingParties {
+    return [self visiblePartiesFromArray:self.upcomingParties];
+}
+
+- (NSArray<HangoParty *> *)visibleAttendedParties {
+    return [self visiblePartiesFromArray:self.attendedParties];
+}
+
+- (NSArray<HangoAlbumItem *> *)visibleAlbumItems {
+    NSMutableArray<HangoAlbumItem *> *result = [NSMutableArray array];
+    for (HangoAlbumItem *item in self.albumItems) {
+        HangoParty *party = [self partyWithId:item.partyId];
+        if (party && ![self isPartyHostDenied:party]) {
+            [result addObject:item];
+        }
+    }
+    return result.copy;
+}
+
+- (NSArray<NSString *> *)visibleMemberAvatarNamesForParty:(HangoParty *)party {
+    if (!party) {
+        return @[];
+    }
+    NSMutableArray<NSString *> *result = [NSMutableArray array];
+    for (NSString *avatarName in party.memberAvatarNames) {
+        HangoContact *matched = [self contactMatchingName:nil avatarName:avatarName];
+        NSString *memberName = matched.name ?: avatarName;
+        if (![self isDeniedPersonWithName:memberName avatarName:avatarName]) {
+            [result addObject:avatarName];
+        }
+    }
+    return result.copy;
+}
+
+- (void)notifyDeniedContactsDidChange {
+    [NSNotificationCenter.defaultCenter postNotificationName:HangoDeniedContactsDidChangeNotification object:self];
+}
+
 - (NSArray<HangoDialogueItem *> *)dialogueItemsForConversationId:(NSString *)conversationId {
-    return [self.conversationDialogueItems[conversationId] copy] ?: @[];
+    if (![self canAccessDialogueData]) {
+        return @[];
+    }
+    return [self filteredDialogueItems:[self.conversationDialogueItems[conversationId] copy] ?: @[]];
 }
 
 - (NSArray<HangoDialogueItem *> *)dialogueItemsForPartyId:(NSString *)partyId {
-    return [self.partyDialogueItems[partyId] copy] ?: @[];
+    if (![self canAccessDialogueData]) {
+        return @[];
+    }
+    return [self filteredDialogueItems:[self.partyDialogueItems[partyId] copy] ?: @[]];
 }
 
 - (void)loadAcceptedPartyIds {
@@ -607,10 +728,16 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
         [result addObject:contact];
     };
 
-    addPerson(party.hostName, party.hostAvatarName);
+    if (![self isDeniedPersonWithName:party.hostName avatarName:party.hostAvatarName]) {
+        addPerson(party.hostName, party.hostAvatarName);
+    }
     for (NSString *avatarName in party.memberAvatarNames) {
         HangoContact *matched = [self contactMatchingName:nil avatarName:avatarName];
-        addPerson(matched.name ?: avatarName, avatarName);
+        NSString *memberName = matched.name ?: avatarName;
+        if ([self isDeniedPersonWithName:memberName avatarName:avatarName]) {
+            continue;
+        }
+        addPerson(memberName, avatarName);
     }
 
     return result.copy;
@@ -630,6 +757,9 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (NSInteger)addContactWithNumber:(NSString *)number {
+    if (![self canAccessDialogueData]) {
+        return 0;
+    }
     HangoContact *contact = [self contactWithNumber:number];
     if (!contact) {
         return 0;
@@ -675,7 +805,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (BOOL)trackContact:(HangoContact *)contact {
-    if (!contact || [self isCurrentPersonaContact:contact] || [self isContactInList:contact]) {
+    if (![self canAccessDialogueData] || !contact || [self isCurrentPersonaContact:contact] || [self isContactInList:contact]) {
         return NO;
     }
 
@@ -689,7 +819,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (BOOL)untrackContact:(HangoContact *)contact {
-    if (!contact || ![self isContactInList:contact]) {
+    if (![self canAccessDialogueData] || !contact || ![self isContactInList:contact]) {
         return NO;
     }
 
@@ -743,27 +873,51 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
             [defaults addObject:contact];
         }
     }
-    self.contacts = defaults.copy;
+    self.contacts = [self contactsWithDirectoryNumbers:defaults];
     [self applyDenyStateToContacts];
     [self saveContacts];
-    [NSUserDefaults.standardUserDefaults setBool:YES forKey:kHangoDefaultContactsSeededKey];
-    [NSUserDefaults.standardUserDefaults synchronize];
+    NSString *scopedSeededKey = [self scopedDefaultsKey:kHangoDefaultContactsSeededKey];
+    if (scopedSeededKey.length > 0) {
+        [NSUserDefaults.standardUserDefaults setBool:YES forKey:scopedSeededKey];
+        [NSUserDefaults.standardUserDefaults synchronize];
+    }
+}
+
+- (BOOL)shouldSeedDefaultContactsForCurrentAccount {
+    NSString *email = [[self.currentPersona.email stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] lowercaseString];
+    return [[HangoAccountStore shared] isSeedTestAccountEmail:email];
 }
 
 - (void)loadSavedContacts {
-    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    if ([defaults objectForKey:kHangoSavedContactsKey] == nil) {
-        [self seedDefaultContacts];
+    if (![self canAccessDialogueData]) {
+        self.contacts = @[];
         return;
     }
 
-    NSArray *saved = [defaults arrayForKey:kHangoSavedContactsKey];
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSString *scopedContactsKey = [self scopedDefaultsKey:kHangoSavedContactsKey];
+    NSString *scopedSeededKey = [self scopedDefaultsKey:kHangoDefaultContactsSeededKey];
+    if (scopedContactsKey.length == 0) {
+        self.contacts = @[];
+        return;
+    }
+
+    if ([defaults objectForKey:scopedContactsKey] == nil) {
+        if ([self shouldSeedDefaultContactsForCurrentAccount]) {
+            [self seedDefaultContacts];
+        } else {
+            self.contacts = @[];
+        }
+        return;
+    }
+
+    NSArray *saved = [defaults arrayForKey:scopedContactsKey];
     if (![saved isKindOfClass:NSArray.class]) {
         self.contacts = @[];
         return;
     }
     if (saved.count == 0) {
-        if (![defaults boolForKey:kHangoDefaultContactsSeededKey]) {
+        if (scopedSeededKey.length > 0 && ![defaults boolForKey:scopedSeededKey] && [self shouldSeedDefaultContactsForCurrentAccount]) {
             [self seedDefaultContacts];
         } else {
             self.contacts = @[];
@@ -780,17 +934,38 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
         HangoContact *canonical = [self directoryContactMatchingName:stored.name avatarName:stored.avatarName];
         [loaded addObject:canonical ?: stored];
     }
-    self.contacts = loaded.copy;
+    self.contacts = [self contactsWithDirectoryNumbers:loaded];
     [self applyDenyStateToContacts];
+    if ([self shouldSeedDefaultContactsForCurrentAccount] && self.contacts.count > 0) {
+        [self saveContacts];
+    }
+}
+
+- (NSArray<HangoContact *> *)contactsWithDirectoryNumbers:(NSArray<HangoContact *> *)contacts {
+    NSMutableArray<HangoContact *> *synced = [NSMutableArray arrayWithCapacity:contacts.count];
+    for (HangoContact *contact in contacts) {
+        HangoContact *canonical = [self directoryContactMatchingName:contact.name avatarName:contact.avatarName];
+        [synced addObject:canonical ?: contact];
+    }
+    return synced.copy;
 }
 
 - (void)saveContacts {
+    if (![self canAccessDialogueData]) {
+        return;
+    }
+    NSString *scopedContactsKey = [self scopedDefaultsKey:kHangoSavedContactsKey];
+    if (scopedContactsKey.length == 0) {
+        return;
+    }
+
     NSMutableArray *serialized = [NSMutableArray array];
     for (HangoContact *contact in self.contacts) {
         [serialized addObject:[self dictionaryFromContact:contact]];
     }
-    [NSUserDefaults.standardUserDefaults setObject:serialized forKey:kHangoSavedContactsKey];
+    [NSUserDefaults.standardUserDefaults setObject:serialized forKey:scopedContactsKey];
     [NSUserDefaults.standardUserDefaults synchronize];
+    [self notifyContactsDataDidChange];
 }
 
 - (void)addSparkles:(NSInteger)amount {
@@ -804,7 +979,12 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (void)loadDenyListedContactIds {
-    NSArray<NSString *> *saved = [NSUserDefaults.standardUserDefaults arrayForKey:kHangoDeniedContactIdsKey];
+    if (![self canAccessDialogueData]) {
+        self.deniedContactIds = [NSMutableSet set];
+        return;
+    }
+    NSString *scopedKey = [self scopedDefaultsKey:kHangoDeniedContactIdsKey];
+    NSArray<NSString *> *saved = scopedKey.length > 0 ? [NSUserDefaults.standardUserDefaults arrayForKey:scopedKey] : nil;
     self.deniedContactIds = saved.count > 0 ? [NSMutableSet setWithArray:saved] : [NSMutableSet set];
     [self applyDenyStateToContacts];
 }
@@ -813,10 +993,20 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     for (HangoContact *contact in self.directoryContacts) {
         contact.isDenied = [self.deniedContactIds containsObject:contact.contactId];
     }
+    for (HangoContact *contact in self.contacts) {
+        contact.isDenied = [self.deniedContactIds containsObject:contact.contactId];
+    }
 }
 
 - (void)saveDeniedContactIds {
-    [NSUserDefaults.standardUserDefaults setObject:self.deniedContactIds.allObjects forKey:kHangoDeniedContactIdsKey];
+    if (![self canAccessDialogueData]) {
+        return;
+    }
+    NSString *scopedKey = [self scopedDefaultsKey:kHangoDeniedContactIdsKey];
+    if (scopedKey.length == 0) {
+        return;
+    }
+    [NSUserDefaults.standardUserDefaults setObject:self.deniedContactIds.allObjects forKey:scopedKey];
     [NSUserDefaults.standardUserDefaults synchronize];
 }
 
@@ -834,6 +1024,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     [self.conversationContactIds removeObject:contactId];
     [self rebuildConversationsList];
     [self saveConversationData];
+    [self notifyDeniedContactsDidChange];
 }
 
 - (void)removeContactFromDenyList:(NSString *)contactId {
@@ -853,6 +1044,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
         [self rebuildConversationsList];
         [self saveConversationData];
     }
+    [self notifyDeniedContactsDidChange];
 }
 
 - (NSArray<HangoContact *> *)deniedContacts {
@@ -909,11 +1101,13 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (nullable HangoDialogueItem *)lastDialogueForPartyId:(NSString *)partyId {
-    NSArray<HangoDialogueItem *> *dialogueItems = self.partyDialogueItems[partyId];
-    return dialogueItems.lastObject;
+    return [self dialogueItemsForPartyId:partyId].lastObject;
 }
 
 - (NSArray<HangoDialogueThread *> *)activeDialogueThreads {
+    if (![self canAccessDialogueData]) {
+        return @[];
+    }
     NSMutableArray<HangoDialogueThread *> *threads = [NSMutableArray array];
     NSMutableSet<NSString *> *seenKeys = [NSMutableSet set];
 
@@ -949,7 +1143,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
                 continue;
             }
             HangoParty *party = [self partyWithId:identifier];
-            if (!party) {
+            if (!party || [self isPartyHostDenied:party]) {
                 continue;
             }
             HangoDialogueThread *thread = [[HangoDialogueThread alloc] init];
@@ -990,7 +1184,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
             continue;
         }
         HangoParty *party = [self partyWithId:partyId];
-        if (!party) {
+        if (!party || [self isPartyHostDenied:party]) {
             continue;
         }
         HangoDialogueThread *thread = [[HangoDialogueThread alloc] init];
@@ -1014,8 +1208,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (nullable HangoDialogueItem *)lastDialogueForConversationId:(NSString *)conversationId {
-    NSArray<HangoDialogueItem *> *dialogueItems = self.conversationDialogueItems[conversationId];
-    return dialogueItems.lastObject;
+    return [self dialogueItemsForConversationId:conversationId].lastObject;
 }
 
 - (NSString *)previewTextForDialogueItem:(HangoDialogueItem *)dialogueItem {
@@ -1023,17 +1216,22 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
         return @"";
     }
     switch (dialogueItem.itemType) {
-        case HangoDialogueItemTypeAudio:
-            return dialogueItem.content.length > 0 ? dialogueItem.content : @"[Voice]";
+        case HangoDialogueItemTypeAudio: {
+            if (dialogueItem.content.length > 0) {
+                return [NSString stringWithFormat:HangoDisplayString(HangoDisplayStringKeyVoicePreviewFormat), dialogueItem.content];
+            }
+            NSInteger seconds = MAX(dialogueItem.audioDuration, 1);
+            return [NSString stringWithFormat:HangoDisplayString(HangoDisplayStringKeyVoicePreviewSecondsFormat), (long)seconds];
+        }
         case HangoDialogueItemTypeImage:
-            return @"[Photo]";
+            return HangoDisplayString(HangoDisplayStringKeyPhotoPreview);
         default:
             return dialogueItem.content ?: @"";
     }
 }
 
 - (void)appendDialogueItem:(HangoDialogueItem *)dialogueItem toConversationId:(NSString *)conversationId {
-    if (conversationId.length == 0 || !dialogueItem) {
+    if (conversationId.length == 0 || !dialogueItem || ![self canAccessDialogueData]) {
         return;
     }
     if (!self.conversationDialogueItems[conversationId]) {
@@ -1051,7 +1249,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (void)appendPartyDialogueItem:(HangoDialogueItem *)dialogueItem partyId:(NSString *)partyId {
-    if (partyId.length == 0 || !dialogueItem) {
+    if (partyId.length == 0 || !dialogueItem || ![self canAccessDialogueData]) {
         return;
     }
     if (!self.partyDialogueItems[partyId]) {
@@ -1334,9 +1532,295 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     return dialogueItem;
 }
 
-- (void)loadSavedConversationDialogueItems {
+#pragma mark - Account-scoped dialogue storage
+
+- (NSString *)dialogueStorageKeyForPersona:(HangoPersona *)persona {
+    NSString *name = [persona.name stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (name.length > 0) {
+        return [NSString stringWithFormat:@"user:%@", name];
+    }
+    NSString *email = [[persona.email stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] lowercaseString];
+    if (email.length > 0) {
+        return [NSString stringWithFormat:@"email:%@", email];
+    }
+    if (persona.personaId.length > 0) {
+        return [NSString stringWithFormat:@"id:%@", persona.personaId];
+    }
+    return nil;
+}
+
+- (NSString *)dialogueStorageKeyForCurrentSession {
+    if (![NSUserDefaults.standardUserDefaults boolForKey:kHangoIsLoggedInKey]) {
+        return nil;
+    }
+    return [self dialogueStorageKeyForPersona:self.currentPersona];
+}
+
+- (BOOL)canAccessDialogueData {
+    return [self dialogueStorageKeyForCurrentSession].length > 0;
+}
+
+- (NSString *)scopedDefaultsKey:(NSString *)baseKey storageKey:(NSString *)storageKey {
+    if (baseKey.length == 0 || storageKey.length == 0) {
+        return nil;
+    }
+    return [NSString stringWithFormat:@"%@.%@", baseKey, storageKey];
+}
+
+- (NSString *)scopedDefaultsKey:(NSString *)baseKey {
+    return [self scopedDefaultsKey:baseKey storageKey:[self dialogueStorageKeyForCurrentSession]];
+}
+
+- (void)clearInMemoryDialogueData {
+    [self.conversationDialogueItems removeAllObjects];
+    [self.conversationContactIds removeAllObjects];
+    [self.partyDialogueItems removeAllObjects];
+    [self.partyConversationPartyIds removeAllObjects];
+    [self.dialogueThreadOrder removeAllObjects];
+    self.conversations = @[];
+}
+
+- (void)clearInMemoryContactsData {
+    self.contacts = @[];
+    self.deniedContactIds = [NSMutableSet set];
+    [self applyDenyStateToContacts];
+}
+
+- (void)notifyDialogueDataDidChange {
+    [NSNotificationCenter.defaultCenter postNotificationName:HangoDialogueDataDidChangeNotification object:self];
+}
+
+- (void)notifyContactsDataDidChange {
+    [NSNotificationCenter.defaultCenter postNotificationName:HangoContactsDataDidChangeNotification object:self];
+}
+
+- (void)unloadDialogueDataForGuestSession {
+    [self clearInMemoryDialogueData];
+    [self clearInMemoryContactsData];
+    [self notifyDialogueDataDidChange];
+    [self notifyContactsDataDidChange];
+}
+
+- (void)deletePersistedDialogueDataForCurrentAccount {
+    NSString *storageKey = [self dialogueStorageKeyForCurrentSession];
+    if (storageKey.length == 0) {
+        storageKey = [self dialogueStorageKeyForPersona:self.currentPersona];
+    }
+    if (storageKey.length > 0) {
+        [self removePersistedDialogueDataForStorageKey:storageKey];
+        [self removePersistedContactsDataForStorageKey:storageKey];
+    }
+    [self clearInMemoryDialogueData];
+    [self clearInMemoryContactsData];
+}
+
+- (void)reloadDialogueDataForCurrentAccount {
+    [self clearInMemoryDialogueData];
+    [self clearInMemoryContactsData];
+    if (![self canAccessDialogueData]) {
+        [self notifyDialogueDataDidChange];
+        [self notifyContactsDataDidChange];
+        return;
+    }
+    [self migrateLegacyGlobalDialogueDataIfNeeded];
+    [self migrateLegacyGlobalContactsDataIfNeeded];
+    [self loadDenyListedContactIds];
+    [self loadSavedContacts];
+    [self loadSavedConversationDialogueItems];
+    [self loadSavedPartyDialogueItems];
+    [self notifyDialogueDataDidChange];
+    [self notifyContactsDataDidChange];
+}
+
+- (void)migrateLegacyGlobalDialogueDataIfNeeded {
+    NSString *accountKey = [self dialogueStorageKeyForCurrentSession];
+    if (accountKey.length == 0) {
+        return;
+    }
+
+    NSString *migrationFlagKey = [NSString stringWithFormat:@"%@%@", kHangoDialogueLegacyMigratedPrefix, accountKey];
+    if ([NSUserDefaults.standardUserDefaults boolForKey:migrationFlagKey]) {
+        return;
+    }
+
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    NSDictionary *savedDialogueItems = [defaults dictionaryForKey:kHangoConversationDialogueKey];
+    if ([defaults objectForKey:[self scopedDefaultsKey:kHangoConversationDialogueKey]]) {
+        [defaults setBool:YES forKey:migrationFlagKey];
+        [defaults synchronize];
+        return;
+    }
+
+    NSDictionary *legacyConversationDialogue = [defaults dictionaryForKey:kHangoConversationDialogueKey];
+    NSArray *legacyContactIds = [defaults arrayForKey:kHangoConversationContactIdsKey];
+    NSDictionary *legacyPartyDialogue = [defaults dictionaryForKey:kHangoPartyDialogueKey];
+    NSArray *legacyPartyIds = [defaults arrayForKey:kHangoPartyConversationIdsKey];
+    NSArray *legacyThreadOrder = [defaults arrayForKey:kHangoDialogueThreadOrderKey];
+    BOOL hasLegacyData = legacyConversationDialogue.count > 0
+        || legacyPartyDialogue.count > 0
+        || legacyContactIds.count > 0
+        || legacyPartyIds.count > 0
+        || legacyThreadOrder.count > 0;
+    if (!hasLegacyData) {
+        [defaults setBool:YES forKey:migrationFlagKey];
+        [defaults synchronize];
+        return;
+    }
+
+    if (legacyConversationDialogue) {
+        [defaults setObject:legacyConversationDialogue forKey:[self scopedDefaultsKey:kHangoConversationDialogueKey]];
+    }
+    if (legacyContactIds) {
+        [defaults setObject:legacyContactIds forKey:[self scopedDefaultsKey:kHangoConversationContactIdsKey]];
+    }
+    if (legacyPartyDialogue) {
+        [defaults setObject:legacyPartyDialogue forKey:[self scopedDefaultsKey:kHangoPartyDialogueKey]];
+    }
+    if (legacyPartyIds) {
+        [defaults setObject:legacyPartyIds forKey:[self scopedDefaultsKey:kHangoPartyConversationIdsKey]];
+    }
+    if (legacyThreadOrder) {
+        [defaults setObject:legacyThreadOrder forKey:[self scopedDefaultsKey:kHangoDialogueThreadOrderKey]];
+    }
+
+    [defaults removeObjectForKey:kHangoConversationDialogueKey];
+    [defaults removeObjectForKey:kHangoConversationContactIdsKey];
+    [defaults removeObjectForKey:kHangoPartyDialogueKey];
+    [defaults removeObjectForKey:kHangoPartyConversationIdsKey];
+    [defaults removeObjectForKey:kHangoDialogueThreadOrderKey];
+    [defaults setBool:YES forKey:migrationFlagKey];
+    [defaults synchronize];
+}
+
+- (void)migratePersistedDialogueDataFromKey:(NSString *)fromKey toKey:(NSString *)toKey {
+    if (fromKey.length == 0 || toKey.length == 0 || [fromKey isEqualToString:toKey]) {
+        return;
+    }
+
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSArray<NSString *> *baseKeys = @[
+        kHangoConversationDialogueKey,
+        kHangoConversationContactIdsKey,
+        kHangoPartyDialogueKey,
+        kHangoPartyConversationIdsKey,
+        kHangoDialogueThreadOrderKey,
+        kHangoSavedContactsKey,
+        kHangoDeniedContactIdsKey
+    ];
+    for (NSString *baseKey in baseKeys) {
+        NSString *fromScopedKey = [self scopedDefaultsKey:baseKey storageKey:fromKey];
+        NSString *toScopedKey = [self scopedDefaultsKey:baseKey storageKey:toKey];
+        id value = [defaults objectForKey:fromScopedKey];
+        if (value && ![defaults objectForKey:toScopedKey]) {
+            [defaults setObject:value forKey:toScopedKey];
+        }
+        [defaults removeObjectForKey:fromScopedKey];
+    }
+
+    NSString *fromSeededKey = [self scopedDefaultsKey:kHangoDefaultContactsSeededKey storageKey:fromKey];
+    NSString *toSeededKey = [self scopedDefaultsKey:kHangoDefaultContactsSeededKey storageKey:toKey];
+    if ([defaults objectForKey:fromSeededKey] && ![defaults objectForKey:toSeededKey]) {
+        [defaults setBool:[defaults boolForKey:fromSeededKey] forKey:toSeededKey];
+    }
+    [defaults removeObjectForKey:fromSeededKey];
+    [defaults synchronize];
+}
+
+- (void)removePersistedContactsDataForStorageKey:(NSString *)storageKey {
+    if (storageKey.length == 0) {
+        return;
+    }
+
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSArray<NSString *> *baseKeys = @[
+        kHangoSavedContactsKey,
+        kHangoDeniedContactIdsKey
+    ];
+    for (NSString *baseKey in baseKeys) {
+        [defaults removeObjectForKey:[self scopedDefaultsKey:baseKey storageKey:storageKey]];
+    }
+    [defaults removeObjectForKey:[self scopedDefaultsKey:kHangoDefaultContactsSeededKey storageKey:storageKey]];
+    [defaults removeObjectForKey:[NSString stringWithFormat:@"%@%@", kHangoContactsLegacyMigratedPrefix, storageKey]];
+    [defaults synchronize];
+}
+
+- (void)migrateLegacyGlobalContactsDataIfNeeded {
+    NSString *accountKey = [self dialogueStorageKeyForCurrentSession];
+    if (accountKey.length == 0) {
+        return;
+    }
+
+    NSString *migrationFlagKey = [NSString stringWithFormat:@"%@%@", kHangoContactsLegacyMigratedPrefix, accountKey];
+    if ([NSUserDefaults.standardUserDefaults boolForKey:migrationFlagKey]) {
+        return;
+    }
+
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    if ([defaults objectForKey:[self scopedDefaultsKey:kHangoSavedContactsKey]]) {
+        [defaults setBool:YES forKey:migrationFlagKey];
+        [defaults synchronize];
+        return;
+    }
+
+    NSArray *legacyContacts = [defaults arrayForKey:kHangoSavedContactsKey];
+    NSArray *legacyDeniedIds = [defaults arrayForKey:kHangoDeniedContactIdsKey];
+    BOOL legacySeeded = [defaults boolForKey:kHangoDefaultContactsSeededKey];
+    BOOL hasLegacyData = legacyContacts.count > 0 || legacyDeniedIds.count > 0 || legacySeeded;
+    if (!hasLegacyData) {
+        [defaults setBool:YES forKey:migrationFlagKey];
+        [defaults synchronize];
+        return;
+    }
+
+    if ([self shouldSeedDefaultContactsForCurrentAccount]) {
+        if (legacyContacts) {
+            [defaults setObject:legacyContacts forKey:[self scopedDefaultsKey:kHangoSavedContactsKey]];
+        }
+        if (legacyDeniedIds) {
+            [defaults setObject:legacyDeniedIds forKey:[self scopedDefaultsKey:kHangoDeniedContactIdsKey]];
+        }
+        if (legacySeeded) {
+            NSString *scopedSeededKey = [self scopedDefaultsKey:kHangoDefaultContactsSeededKey];
+            if (scopedSeededKey.length > 0) {
+                [defaults setBool:YES forKey:scopedSeededKey];
+            }
+        }
+    }
+
+    [defaults removeObjectForKey:kHangoSavedContactsKey];
+    [defaults removeObjectForKey:kHangoDeniedContactIdsKey];
+    [defaults removeObjectForKey:kHangoDefaultContactsSeededKey];
+    [defaults setBool:YES forKey:migrationFlagKey];
+    [defaults synchronize];
+}
+
+- (void)removePersistedDialogueDataForStorageKey:(NSString *)storageKey {
+    if (storageKey.length == 0) {
+        return;
+    }
+
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSArray<NSString *> *baseKeys = @[
+        kHangoConversationDialogueKey,
+        kHangoConversationContactIdsKey,
+        kHangoPartyDialogueKey,
+        kHangoPartyConversationIdsKey,
+        kHangoDialogueThreadOrderKey
+    ];
+    for (NSString *baseKey in baseKeys) {
+        [defaults removeObjectForKey:[self scopedDefaultsKey:baseKey storageKey:storageKey]];
+    }
+    [defaults removeObjectForKey:[NSString stringWithFormat:@"%@%@", kHangoDialogueLegacyMigratedPrefix, storageKey]];
+    [defaults synchronize];
+}
+
+- (void)loadSavedConversationDialogueItems {
+    NSString *scopedDialogueKey = [self scopedDefaultsKey:kHangoConversationDialogueKey];
+    if (scopedDialogueKey.length == 0) {
+        return;
+    }
+
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSDictionary *savedDialogueItems = [defaults dictionaryForKey:scopedDialogueKey];
     if ([savedDialogueItems isKindOfClass:NSDictionary.class]) {
         NSMutableDictionary<NSString *, NSMutableArray<HangoDialogueItem *> *> *loaded = [NSMutableDictionary dictionary];
         [savedDialogueItems enumerateKeysAndObjectsUsingBlock:^(NSString *conversationId, NSArray *itemDicts, BOOL *stop) {
@@ -1356,12 +1840,12 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
         self.conversationDialogueItems = loaded;
     }
 
-    NSArray<NSString *> *savedContactIds = [defaults arrayForKey:kHangoConversationContactIdsKey];
+    NSArray<NSString *> *savedContactIds = [defaults arrayForKey:[self scopedDefaultsKey:kHangoConversationContactIdsKey]];
     if ([savedContactIds isKindOfClass:NSArray.class]) {
         self.conversationContactIds = savedContactIds.mutableCopy;
     }
 
-    NSArray<NSString *> *savedThreadOrder = [defaults arrayForKey:kHangoDialogueThreadOrderKey];
+    NSArray<NSString *> *savedThreadOrder = [defaults arrayForKey:[self scopedDefaultsKey:kHangoDialogueThreadOrderKey]];
     if ([savedThreadOrder isKindOfClass:NSArray.class]) {
         self.dialogueThreadOrder = savedThreadOrder.mutableCopy;
     } else {
@@ -1381,8 +1865,13 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (void)loadSavedPartyDialogueItems {
+    NSString *scopedDialogueKey = [self scopedDefaultsKey:kHangoPartyDialogueKey];
+    if (scopedDialogueKey.length == 0) {
+        return;
+    }
+
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    NSDictionary *savedDialogueItems = [defaults dictionaryForKey:kHangoPartyDialogueKey];
+    NSDictionary *savedDialogueItems = [defaults dictionaryForKey:scopedDialogueKey];
     if ([savedDialogueItems isKindOfClass:NSDictionary.class]) {
         NSMutableDictionary<NSString *, NSMutableArray<HangoDialogueItem *> *> *loaded = [NSMutableDictionary dictionary];
         [savedDialogueItems enumerateKeysAndObjectsUsingBlock:^(NSString *partyId, NSArray *itemDicts, BOOL *stop) {
@@ -1402,13 +1891,17 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
         self.partyDialogueItems = loaded;
     }
 
-    NSArray<NSString *> *savedPartyIds = [defaults arrayForKey:kHangoPartyConversationIdsKey];
+    NSArray<NSString *> *savedPartyIds = [defaults arrayForKey:[self scopedDefaultsKey:kHangoPartyConversationIdsKey]];
     if ([savedPartyIds isKindOfClass:NSArray.class]) {
         self.partyConversationPartyIds = savedPartyIds.mutableCopy;
     }
 }
 
 - (void)savePartyConversationData {
+    if (![self canAccessDialogueData]) {
+        return;
+    }
+
     NSMutableDictionary *serialized = [NSMutableDictionary dictionary];
     [self.partyDialogueItems enumerateKeysAndObjectsUsingBlock:^(NSString *partyId, NSMutableArray<HangoDialogueItem *> *dialogueItems, BOOL *stop) {
         NSMutableArray *itemDicts = [NSMutableArray array];
@@ -1419,13 +1912,17 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     }];
 
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    [defaults setObject:serialized forKey:kHangoPartyDialogueKey];
-    [defaults setObject:self.partyConversationPartyIds.copy forKey:kHangoPartyConversationIdsKey];
-    [defaults setObject:self.dialogueThreadOrder.copy forKey:kHangoDialogueThreadOrderKey];
+    [defaults setObject:serialized forKey:[self scopedDefaultsKey:kHangoPartyDialogueKey]];
+    [defaults setObject:self.partyConversationPartyIds.copy forKey:[self scopedDefaultsKey:kHangoPartyConversationIdsKey]];
+    [defaults setObject:self.dialogueThreadOrder.copy forKey:[self scopedDefaultsKey:kHangoDialogueThreadOrderKey]];
     [defaults synchronize];
 }
 
 - (void)saveConversationData {
+    if (![self canAccessDialogueData]) {
+        return;
+    }
+
     NSMutableDictionary *serialized = [NSMutableDictionary dictionary];
     [self.conversationDialogueItems enumerateKeysAndObjectsUsingBlock:^(NSString *conversationId, NSMutableArray<HangoDialogueItem *> *dialogueItems, BOOL *stop) {
         NSMutableArray *itemDicts = [NSMutableArray array];
@@ -1436,9 +1933,9 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     }];
 
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    [defaults setObject:serialized forKey:kHangoConversationDialogueKey];
-    [defaults setObject:self.conversationContactIds.copy forKey:kHangoConversationContactIdsKey];
-    [defaults setObject:self.dialogueThreadOrder.copy forKey:kHangoDialogueThreadOrderKey];
+    [defaults setObject:serialized forKey:[self scopedDefaultsKey:kHangoConversationDialogueKey]];
+    [defaults setObject:self.conversationContactIds.copy forKey:[self scopedDefaultsKey:kHangoConversationContactIdsKey]];
+    [defaults setObject:self.dialogueThreadOrder.copy forKey:[self scopedDefaultsKey:kHangoDialogueThreadOrderKey]];
     [defaults synchronize];
 }
 
@@ -1564,10 +2061,10 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         mapping = @{
-            @"attended_1": @[@"派对1.1", @"派对1.2", @"派对1.3"],
-            @"attended_2": @[@"派对2.1", @"派对2.2", @"派对2.3"],
-            @"attended_3": @[@"派对3.1", @"派对3.2"],
-            @"attended_4": @[@"派对4.1", @"派对4.2", @"派对4.3"],
+            @"attended_1": @[@"party_record_1_1", @"party_record_1_2", @"party_record_1_3"],
+            @"attended_2": @[@"party_record_2_1", @"party_record_2_2", @"party_record_2_3"],
+            @"attended_3": @[@"party_record_3_1", @"party_record_3_2"],
+            @"attended_4": @[@"party_record_4_1", @"party_record_4_2", @"party_record_4_3"],
         };
     });
     return partyId.length > 0 ? (mapping[partyId] ?: @[]) : @[];
@@ -1589,6 +2086,11 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (NSArray<UIImage *> *)partyRecordPhotoImagesForPartyId:(NSString *)partyId {
+    HangoParty *party = [self partyWithId:partyId];
+    if ([self isPartyHostDenied:party]) {
+        return @[];
+    }
+
     NSMutableArray<UIImage *> *images = [NSMutableArray array];
     NSArray<NSString *> *assetNames = [self attendedPartyPhotoAssetNamesForPartyId:partyId];
     if (assetNames.count > 0) {
@@ -1634,6 +2136,29 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     }
     [self.partyRecordPhotoPaths[partyId] addObject:storedPath];
     [self savePartyRecordPhotos];
+    return absolutePath;
+}
+
+- (NSString *)dialogueImagesDirectoryPath {
+    NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+    return [documents stringByAppendingPathComponent:kHangoDialogueImagesFolderName];
+}
+
+- (NSString *)saveConversationDialogueImage:(UIImage *)image conversationId:(NSString *)conversationId {
+    if (!image || conversationId.length == 0) {
+        return nil;
+    }
+    NSData *data = UIImageJPEGRepresentation(image, 0.88);
+    if (!data) {
+        return nil;
+    }
+    NSString *directory = [self dialogueImagesDirectoryPath];
+    [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:nil];
+    NSString *fileName = [NSString stringWithFormat:@"chat_%@_%@.jpg", conversationId, NSUUID.UUID.UUIDString];
+    NSString *absolutePath = [directory stringByAppendingPathComponent:fileName];
+    if (![data writeToFile:absolutePath atomically:YES]) {
+        return nil;
+    }
     return absolutePath;
 }
 
@@ -1696,6 +2221,28 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     }];
     [NSUserDefaults.standardUserDefaults setObject:payload forKey:kHangoHiddenBuiltinPartyPhotosKey];
     [NSUserDefaults.standardUserDefaults synchronize];
+}
+
+- (NSInteger)visibleBuiltinPartyRecordPhotoCountForPartyId:(NSString *)partyId {
+    NSInteger count = 0;
+    NSArray<NSString *> *assetNames = [self attendedPartyPhotoAssetNamesForPartyId:partyId];
+    NSSet<NSNumber *> *hiddenIndexes = [NSSet setWithArray:[self hiddenBuiltinPhotoIndexesForPartyId:partyId]];
+    for (NSInteger i = 0; i < (NSInteger)assetNames.count; i++) {
+        if ([hiddenIndexes containsObject:@(i)]) {
+            continue;
+        }
+        if ([HangoTheme imageNamed:assetNames[i]]) {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+- (BOOL)isCurrentUserPartyRecordPhotoAtDisplayIndex:(NSInteger)displayIndex partyId:(NSString *)partyId {
+    if (partyId.length == 0 || displayIndex < 0) {
+        return NO;
+    }
+    return displayIndex >= [self visibleBuiltinPartyRecordPhotoCountForPartyId:partyId];
 }
 
 - (BOOL)removePartyRecordPhotoAtDisplayIndex:(NSInteger)displayIndex partyId:(NSString *)partyId {
@@ -1813,20 +2360,11 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 }
 
 - (void)clearConversationData {
-    [self.conversationDialogueItems removeAllObjects];
-    [self.conversationContactIds removeAllObjects];
-    [self.partyDialogueItems removeAllObjects];
-    [self.partyConversationPartyIds removeAllObjects];
-    [self.dialogueThreadOrder removeAllObjects];
-    self.conversations = @[];
-
-    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    [defaults removeObjectForKey:kHangoConversationDialogueKey];
-    [defaults removeObjectForKey:kHangoConversationContactIdsKey];
-    [defaults removeObjectForKey:kHangoPartyDialogueKey];
-    [defaults removeObjectForKey:kHangoPartyConversationIdsKey];
-    [defaults removeObjectForKey:kHangoDialogueThreadOrderKey];
-    [defaults synchronize];
+    NSString *storageKey = [self dialogueStorageKeyForCurrentSession];
+    [self clearInMemoryDialogueData];
+    if (storageKey.length > 0) {
+        [self removePersistedDialogueDataForStorageKey:storageKey];
+    }
 }
 
 - (void)clearSavedPersonaProfile {
@@ -1839,6 +2377,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     self.currentPersona.sparkleBalance = 0;
     self.currentPersona.hostedPartyCount = 0;
     self.contacts = @[];
+    self.deniedContactIds = [NSMutableSet set];
     self.hostedParties = @[];
     [self rebuildUpcomingPartiesList];
 
@@ -1852,10 +2391,8 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     [defaults removeObjectForKey:kHangoSavedHostedPartyCountKey];
     [defaults removeObjectForKey:kHangoSavedHostedPartiesKey];
     [defaults removeObjectForKey:kHangoSavedPersonaIdKey];
-    [defaults removeObjectForKey:kHangoSavedContactsKey];
-    [defaults removeObjectForKey:kHangoDefaultContactsSeededKey];
     [defaults synchronize];
-    [self clearConversationData];
+    [self clearInMemoryContactsData];
     [self clearPartyRecordPhotos];
     [self clearDecorationCounts];
     self.currentPersona.personaId = @(kHangoBasePersonaId).stringValue;
@@ -1871,6 +2408,30 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
 
 - (BOOL)hasPersistedPersonaProfile {
     return [NSUserDefaults.standardUserDefaults stringForKey:kHangoSavedPersonaNameKey].length > 0;
+}
+
+- (void)applySeedProfileForTestAccountWithEmail:(NSString *)email {
+    NSString *normalizedEmail = [[email stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] lowercaseString];
+    NSString *oldStorageKey = [self dialogueStorageKeyForPersona:self.currentPersona];
+    self.currentPersona.personaId = @(kHangoBasePersonaId).stringValue;
+    [self savePersonaId];
+
+    self.currentPersona.name = @"Palmer";
+    self.currentPersona.email = normalizedEmail;
+    if (self.currentPersona.bio.length == 0) {
+        self.currentPersona.bio = @"";
+    }
+
+    if (self.currentPersona.avatarLocalPath.length > 0) {
+        [NSFileManager.defaultManager removeItemAtPath:self.currentPersona.avatarLocalPath error:nil];
+    }
+    self.currentPersona.avatarName = @"Palmer";
+    self.currentPersona.avatarLocalPath = nil;
+    [self persistCurrentPersonaProfile];
+    NSString *newStorageKey = [self dialogueStorageKeyForPersona:self.currentPersona];
+    if (oldStorageKey.length > 0 && newStorageKey.length > 0 && ![oldStorageKey isEqualToString:newStorageKey]) {
+        [self migratePersistedDialogueDataFromKey:oldStorageKey toKey:newStorageKey];
+    }
 }
 
 - (void)persistCurrentPersonaProfile {
@@ -1889,6 +2450,7 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
                                  avatarName:(NSString *)avatarName
                                   avatarImage:(UIImage *)avatarImage
                                           bio:(NSString *)bio {
+    NSString *oldStorageKey = [self dialogueStorageKeyForPersona:self.currentPersona];
     NSString *trimmedName = [name stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     if (trimmedName.length > 0) {
         self.currentPersona.name = trimmedName;
@@ -1916,6 +2478,11 @@ static const NSInteger kHangoDecorationPurchaseSparkleCost = 50;
     }
 
     [self persistCurrentPersonaProfile];
+    NSString *newStorageKey = [self dialogueStorageKeyForPersona:self.currentPersona];
+    if (oldStorageKey.length > 0 && newStorageKey.length > 0 && ![oldStorageKey isEqualToString:newStorageKey]) {
+        [self migratePersistedDialogueDataFromKey:oldStorageKey toKey:newStorageKey];
+        [self reloadDialogueDataForCurrentAccount];
+    }
 }
 
 - (void)updateCurrentPersonaProfileWithName:(NSString *)name avatarImage:(UIImage *)avatarImage {

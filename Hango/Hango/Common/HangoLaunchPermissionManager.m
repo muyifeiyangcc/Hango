@@ -1,5 +1,4 @@
 #import "HangoLaunchPermissionManager.h"
-#import <UserNotifications/UserNotifications.h>
 
 static NSString * const kHangoLaunchPermissionsDoneKey = @"HangoLaunchPermissionsDone";
 static NSString * const kHangoNetworkAccessAllowedKey = @"HangoNetworkAccessAllowed";
@@ -23,9 +22,7 @@ static NSString * const kHangoNetworkAccessAllowedKey = @"HangoNetworkAccessAllo
     if ([[NSUserDefaults standardUserDefaults] boolForKey:kHangoLaunchPermissionsDoneKey]) return;
 
     [self showNetworkPermissionAlertFrom:viewController completion:^{
-        [self requestAppleNotificationPermissionWithCompletion:^{
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kHangoLaunchPermissionsDoneKey];
-        }];
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kHangoLaunchPermissionsDoneKey];
     }];
 }
 
@@ -123,17 +120,6 @@ static NSString * const kHangoNetworkAccessAllowedKey = @"HangoNetworkAccessAllo
         }];
     }]];
     [presenter presentViewController:alert animated:YES completion:nil];
-}
-
-+ (void)requestAppleNotificationPermissionWithCompletion:(dispatch_block_t)completion {
-    UNUserNotificationCenter *center = UNUserNotificationCenter.currentNotificationCenter;
-    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionBadge | UNAuthorizationOptionSound)
-                          completionHandler:^(__unused BOOL granted, __unused NSError *error) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[UIApplication sharedApplication] registerForRemoteNotifications];
-            if (completion) completion();
-        });
-    }];
 }
 
 @end

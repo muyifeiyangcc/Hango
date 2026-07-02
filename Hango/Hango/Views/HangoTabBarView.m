@@ -1,10 +1,11 @@
 #import "HangoTabBarView.h"
 #import "HangoTheme.h"
-#import "Masonry.h"
+#import "HGXAnchor.h"
 
 static const CGFloat kHangoTabBarContentHeight = 56.0;
 static const CGFloat kHangoTabBarLegacyIconBottomInset = 6.0;
 static const CGFloat kHangoTabBarReferenceWidth = 375.0;
+static const CGFloat kHangoTabBarSideIconLift = 8.0;
 
 @interface HangoTabBarView ()
 @property (nonatomic, strong) UIImageView *backgroundView;
@@ -150,6 +151,7 @@ static CGRect HangoTabBarPlusButtonFrame(CGFloat width,
     CGFloat iconSize = HangoTabBarScaledValue(width, 0.076, 28.0, 30.0);
     CGFloat centerSize = HangoTabBarPlusButtonSize(width);
     CGFloat iconTopY = height - iconBottomInset - iconSize;
+    CGFloat sideIconTopY = iconTopY - kHangoTabBarSideIconLift;
     CGFloat sideIconCenterY = iconTopY + iconSize * 0.5;
 
     NSArray<NSNumber *> *centerXs = @[
@@ -172,7 +174,7 @@ static CGRect HangoTabBarPlusButtonFrame(CGFloat width,
         } else {
             CGFloat tapSize = 44.0;
             btn.frame = CGRectMake(centerX - tapSize * 0.5,
-                                   iconTopY - (tapSize - iconSize) * 0.5,
+                                   sideIconTopY - (tapSize - iconSize) * 0.5,
                                    tapSize,
                                    tapSize);
             btn.imageEdgeInsets = UIEdgeInsetsMake((tapSize - iconSize) * 0.5,

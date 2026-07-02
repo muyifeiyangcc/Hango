@@ -1,58 +1,6 @@
 #import "HangoPermissionManager.h"
 #import <AVFoundation/AVFoundation.h>
 #import <Photos/Photos.h>
-#import <CoreLocation/CoreLocation.h>
-
-static CLAuthorizationStatus HangoLocationStatusForManager(CLLocationManager *manager) {
-    return manager.authorizationStatus;
-}
-
-static BOOL HangoIsLocationStatusAuthorized(CLAuthorizationStatus status) {
-    return status == kCLAuthorizationStatusAuthorizedAlways || status == kCLAuthorizationStatusAuthorizedWhenInUse;
-}
-
-static CLAuthorizationStatus HangoCurrentLocationStatus(void) {
-    return HangoLocationStatusForManager([[CLLocationManager alloc] init]);
-}
-
-@interface HangoLocationPermissionRequester : NSObject <CLLocationManagerDelegate>
-@property (nonatomic, copy) HangoPermissionHandler completion;
-@property (nonatomic, strong) CLLocationManager *manager;
-@end
-
-@implementation HangoLocationPermissionRequester                         
-
-- (void)requestWithCompletion:(HangoPermissionHandler)completion {
-    self.completion = completion;
-    self.manager = [[CLLocationManager alloc] init];
-    self.manager.delegate = self;
-
-    CLAuthorizationStatus status = HangoLocationStatusForManager(self.manager);
-    if (status == kCLAuthorizationStatusNotDetermined) {
-        [self.manager requestWhenInUseAuthorization];
-        return;
-    }
-    [self finishWithGranted:HangoIsLocationStatusAuthorized(status)];
-}
-
-- (void)locationManagerDidChangeAuthorization:(CLLocationManager *)manager {
-    CLAuthorizationStatus status = HangoLocationStatusForManager(manager);
-    if (status != kCLAuthorizationStatusNotDetermined) {
-        [self finishWithGranted:HangoIsLocationStatusAuthorized(status)];
-    }
-}
-
-- (void)finishWithGranted:(BOOL)granted {
-    HangoPermissionHandler handler = self.completion;
-    self.completion = nil;
-    self.manager.delegate = nil;
-    self.manager = nil;
-    if (handler) {
-        handler(granted);
-    }
-}
-
-@end
 
 @implementation HangoPermissionManager
 
@@ -64,8 +12,6 @@ static CLAuthorizationStatus HangoCurrentLocationStatus(void) {
             return [self isPhotoLibraryStatusAuthorized:[self photoLibraryStatus]];
         case HangoPermissionTypeMicrophone:
             return AVAudioSession.sharedInstance.recordPermission == AVAudioSessionRecordPermissionGranted;
-        case HangoPermissionTypeLocation:
-            return HangoIsLocationStatusAuthorized(HangoCurrentLocationStatus());
     }
 }
 
@@ -154,20 +100,6 @@ static CLAuthorizationStatus HangoCurrentLocationStatus(void) {
             }];
             break;
         }
-        case HangoPermissionTypeLocation: {
-            static HangoLocationPermissionRequester *requester;
-            requester = [[HangoLocationPermissionRequester alloc] init];
-            [requester requestWithCompletion:^(BOOL granted) {
-                requester = nil;
-                if (!granted) {
-                    [self showDeniedAlertForPermission:type fromViewController:presenter];
-                }
-                if (completion) {
-                    completion(granted);
-                }
-            }];
-            break;
-        }
     }
 }
 
@@ -184,10 +116,6 @@ static CLAuthorizationStatus HangoCurrentLocationStatus(void) {
         case HangoPermissionTypeMicrophone: {
             AVAudioSessionRecordPermission status = AVAudioSession.sharedInstance.recordPermission;
             return status == AVAudioSessionRecordPermissionDenied;
-        }
-        case HangoPermissionTypeLocation: {
-            CLAuthorizationStatus status = HangoCurrentLocationStatus();
-            return status == kCLAuthorizationStatusDenied || status == kCLAuthorizationStatusRestricted;
         }
     }
 }
@@ -207,9 +135,6 @@ static CLAuthorizationStatus HangoCurrentLocationStatus(void) {
             break;
         case HangoPermissionTypeMicrophone:
             message = @"Please allow microphone access in Settings to record voice notes.";
-            break;
-        case HangoPermissionTypeLocation:
-            message = @"Please allow location access in Settings to use personalized services.";
             break;
     }
 

@@ -211,6 +211,25 @@ static void *kHangoVoiceAudioQueueContext = &kHangoVoiceAudioQueueContext;
     }];
 }
 
+- (NSInteger)audioDurationForFileAtPath:(NSString *)path {
+    if (path.length == 0 || ![[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        return 0;
+    }
+
+    NSURL *url = [NSURL fileURLWithPath:path];
+    AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:nil];
+    if (player && player.duration > 0) {
+        return MAX(1, MIN(60, (NSInteger)lrint(player.duration)));
+    }
+
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
+    Float64 seconds = CMTimeGetSeconds(asset.duration);
+    if (seconds > 0 && isfinite(seconds)) {
+        return MAX(1, MIN(60, (NSInteger)lrint(seconds)));
+    }
+    return 0;
+}
+
 - (BOOL)stopRecordingReturningDuration:(NSInteger *)outDuration filePath:(NSString **)outPath {
     __block BOOL stopped = NO;
     __block NSInteger duration = 0;
@@ -230,6 +249,10 @@ static void *kHangoVoiceAudioQueueContext = &kHangoVoiceAudioQueueContext;
         NSTimeInterval seconds = recorder.currentTime;
         duration = MAX(1, MIN(60, (NSInteger)lrint(seconds)));
         path = recordingPath;
+        NSInteger fileDuration = [self audioDurationForFileAtPath:recordingPath];
+        if (fileDuration > 0) {
+            duration = fileDuration;
+        }
         stopped = YES;
     }];
 

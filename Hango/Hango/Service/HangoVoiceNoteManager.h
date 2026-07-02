@@ -18,6 +18,7 @@ FOUNDATION_EXPORT NSString * const HangoVoicePlaybackPlayingKey;
 - (BOOL)startRecordingToPath:(NSString *)path error:(NSError * _Nullable * _Nullable)error;
 - (void)cancelRecording;
 - (BOOL)stopRecordingReturningDuration:(NSInteger *)outDuration filePath:(NSString * _Nullable * _Nullable)outPath;
+- (NSInteger)audioDurationForFileAtPath:(NSString *)path;
 - (void)playAudioAtPath:(NSString *)path;
 - (void)stopPlayback;
 

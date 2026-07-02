@@ -5,7 +5,8 @@
 #import "HangoInboxViewController.h"
 #import "HangoProfileViewController.h"
 #import "HangoTabBarView.h"
-#import "Masonry.h"
+#import "HangoGuestGuard.h"
+#import "HGXAnchor.h"
 
 @interface HangoMainTabBarController () <UINavigationControllerDelegate, UITabBarControllerDelegate>
 @property (nonatomic, strong, readwrite) HangoTabBarView *customTabBarView;
@@ -30,9 +31,9 @@
         [weakSelf handleTabSelection:index];
     };
     [self.view addSubview:self.customTabBarView];
-    [self.customTabBarView mas_makeConstraints:^(MASConstraintMaker *make) {
+    [self.customTabBarView hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.left.right.bottom.equalTo(self.view);
-        make.height.mas_equalTo([self currentTabBarHeight]);
+        make.height.hgx_equalTo([self currentTabBarHeight]);
     }];
     [self.view bringSubviewToFront:self.customTabBarView];
     [self.customTabBarView setSelectedIndex:HangoTabIndexHome animated:NO];
@@ -43,8 +44,8 @@
     [self configureSystemTabBarHidden];
 
     CGFloat height = [self currentTabBarHeight];
-    [self.customTabBarView mas_updateConstraints:^(MASConstraintMaker *make) {
-        make.height.mas_equalTo(height);
+    [self.customTabBarView hgx_updateConstraints:^(HGXConstraintMaker *make) {
+        make.height.hgx_equalTo(height);
     }];
     [self.customTabBarView setNeedsLayout];
     [self.view bringSubviewToFront:self.customTabBarView];
@@ -166,10 +167,21 @@
         if (!nav) {
             return;
         }
+        if (![HangoGuestGuard requireLogin]) {
+            [self.customTabBarView setSelectedIndex:self.selectedIndex animated:NO];
+            return;
+        }
         HangoCreatePartyViewController *create = [[HangoCreatePartyViewController alloc] init];
         [nav pushViewController:create animated:YES];
         [self.customTabBarView setSelectedIndex:self.selectedIndex animated:NO];
         return;
+    }
+
+    if (index == HangoTabIndexProfile) {
+        if (![HangoGuestGuard requireLogin]) {
+            [self.customTabBarView setSelectedIndex:self.selectedIndex animated:NO];
+            return;
+        }
     }
 
     if (index == self.selectedIndex) {

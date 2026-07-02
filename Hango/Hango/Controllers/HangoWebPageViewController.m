@@ -1,7 +1,8 @@
+#import "HangoDisplayString.h"
 #import "HangoWebPageViewController.h"
 #import "HangoAppConfig.h"
 #import "HangoTheme.h"
-#import "Masonry.h"
+#import "HGXAnchor.h"
 #import <WebKit/WebKit.h>
 
 @interface HangoWebPageViewController () <WKNavigationDelegate, UIScrollViewDelegate>
@@ -40,7 +41,7 @@
 + (instancetype)memberAgreementViewController {
     HangoWebPageViewController *vc = [[HangoWebPageViewController alloc] init];
     vc.pageURLString = HangoPersonaAgreementURLString;
-    vc.pageTitle = @"Member Agreement";
+    vc.pageTitle = HangoDisplayString(HangoDisplayStringKeyUserAgreement);
     return vc;
 }
 
@@ -96,13 +97,13 @@
     _progressView.progress = 0;
     [self.contentView addSubview:_progressView];
 
-    [_progressView mas_makeConstraints:^(MASConstraintMaker *make) {
+    [_progressView hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.top.equalTo(self.contentView).offset(44);
         make.left.right.equalTo(self.contentView);
-        make.height.mas_equalTo(2);
+        make.height.hgx_equalTo(2);
     }];
-    [_webView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(_progressView.mas_bottom);
+    [_webView hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(_progressView.hgx_bottom);
         make.left.right.bottom.equalTo(self.contentView);
     }];
 

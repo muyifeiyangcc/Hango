@@ -1,7 +1,7 @@
 #import "HangoTabRootViewController.h"
 #import "HangoMainTabBarController.h"
 #import "HangoTabBarView.h"
-#import "Masonry.h"
+#import "HGXAnchor.h"
 
 static const CGFloat kHangoTabBarContentOverlap = 24.0;
 
@@ -30,17 +30,17 @@ static const CGFloat kHangoTabBarContentOverlap = 24.0;
     [super setupUI];
     self.view.clipsToBounds = NO;
 
-    [self.contentView mas_remakeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(self.view.mas_safeAreaLayoutGuideTop);
+    [self.contentView hgx_remakeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(self.view.hgx_safeAreaLayoutGuideTop);
         make.left.right.equalTo(self.view);
-        make.bottom.equalTo(self.view.mas_bottom).offset(-([self tabBarReservedHeight] - kHangoTabBarContentOverlap));
+        make.bottom.equalTo(self.view.hgx_bottom).offset(-([self tabBarReservedHeight] - kHangoTabBarContentOverlap));
     }];
 }
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-    [self.contentView mas_updateConstraints:^(MASConstraintMaker *make) {
-        make.bottom.equalTo(self.view.mas_bottom).offset(-([self tabBarReservedHeight] - kHangoTabBarContentOverlap));
+    [self.contentView hgx_updateConstraints:^(HGXConstraintMaker *make) {
+        make.bottom.equalTo(self.view.hgx_bottom).offset(-([self tabBarReservedHeight] - kHangoTabBarContentOverlap));
     }];
 }
 
