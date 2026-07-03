@@ -58,13 +58,13 @@ platform :ios do
     on_match
     prepare_gym
     gym(
-      project: "Cynu.xcodeproj",     # 如果是 workspace 就用 workspace
+      project: "Hango.xcodeproj",     # 如果是 workspace 就用 workspace
       scheme: ENV["SCHEME"],         # 一定要有
       clean: true,
 
       export_method: export_method,
       output_directory: "./build",   # 👈 非常关键
-      output_name: "Cynu.ipa"
+      output_name: "Hango.ipa"
     )
   end
 
@@ -135,10 +135,10 @@ platform :ios do
 	  UI.important "profile_name = #{profile_name}"
 
     update_code_signing_settings(
-      path: "Cynu.xcodeproj",
+      path: "Hango.xcodeproj",
       use_automatic_signing: false,
       team_id: "XF9F6JZUN3",
-      targets: ["Cynu"],
+      targets: ["Hango"],
       code_sign_identity: "Apple Distribution",
       profile_name: "match AppStore com.pillion.wagon",
     )
