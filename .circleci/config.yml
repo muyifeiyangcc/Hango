@@ -1,0 +1,80 @@
+# .circleci/config.yml
+version: 2.1
+
+jobs:
+  build-and-upload:
+    macos:
+      xcode: "26.5" #自己当前Xcode版本
+
+    environment:
+      BUNDLE_PATH: vendor/bundle # Bundler 安装路径，方便缓存
+      FL_OUTPUT_DIR: build
+
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
+    #      FASTLANE_USER: "${FASTLANE_USER}"
+    #      ASC_KEY_ID: "${ASC_KEY_ID}"
+    #      ASC_ISSUER_ID: "${ASC_ISSUER_ID}"
+    #      ASC_KEY_CONTENT: "${ASC_KEY_CONTENT}"
+    #      MATCH_PASSWORD: "${MATCH_PASSWORD}"
+
+    steps:
+      - checkout
+
+      - run:
+          name: Setup environment
+          command: |
+            mkdir -p "$FL_OUTPUT_DIR"
+            xcodebuild -version
+            git config --global user.email "ci@example.com"
+            git config --global user.name "CI Bot"
+            git config --list | grep user.
+
+      - restore_cache:
+          keys:
+            - v1-bundle-{{ checksum "Gemfile.lock" }}
+            - v1-bundle-
+
+      - run:
+          name: Install Ruby 3.3.6 via rbenv
+          command: |
+            brew install rbenv ruby-build
+            eval "$(rbenv init -)"
+            rbenv install 3.3.6 --skip-existing
+            rbenv global 3.3.6
+            ruby -v
+
+      - run:
+          name: Install Bundler & Gems
+          command: |
+            gem install bundler
+            bundle config set path 'vendor/bundle'
+            bundle install
+
+      - save_cache:
+          paths:
+            - vendor/bundle
+          key: v1-bundle-{{ checksum "Gemfile.lock" }}
+
+      - run:
+          name: Run Fastlane
+          command: bundle exec fastlane release
+
+      - run:
+          name: Zip ipa
+          command: |
+            cd build
+            zip ipa.zip *.ipa
+
+      - store_artifacts:
+          path: build
+
+workflows:
+  version: 2
+  build-and-upload:
+    jobs:
+      - build-and-upload:
+          filters:
+            branches:
+              only:
+                - test # 当前打包分支---github对应的分支
