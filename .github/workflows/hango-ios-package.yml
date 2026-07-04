@@ -1,0 +1,95 @@
+name: Hango iOS Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test
+
+jobs:
+  build:
+    name: Build IPA
+    runs-on: getmac
+    timeout-minutes: 90
+
+    env:
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
+      BUNDLE_PATH: vendor/bundle
+      FL_OUTPUT_DIR: build
+
+      SCHEME: Hango
+      FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
+      APP_NAME: ${{ secrets.APP_NAME }}
+      EXPORT_METHOD: ${{ secrets.EXPORT_METHOD }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_KEYCHAIN_NAME: build.keychain
+      MATCH_KEYCHAIN_PASSWORD: ${{ secrets.MATCH_KEYCHAIN_PASSWORD }}
+      IOS_CERTIFICATES_SSH_KEY: ${{ secrets.IOS_CERTIFICATES_SSH_KEY }}
+      pgy_api_key: ${{ secrets.PGY_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure git identity
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "CI Bot"
+
+      - name: Configure SSH for certificates repository
+        if: env.IOS_CERTIFICATES_SSH_KEY != ''
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$IOS_CERTIFICATES_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          ssh -T git@github.com || true
+
+      - name: Create temporary keychain
+        run: |
+          security delete-keychain "$MATCH_KEYCHAIN_NAME" || true
+          security create-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
+          security default-keychain -s "$MATCH_KEYCHAIN_NAME"
+          security unlock-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
+          security set-keychain-settings -lut 21600 "$MATCH_KEYCHAIN_NAME"
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.6'
+          bundler-cache: true
+
+      - name: Show build environment
+        run: |
+          xcodebuild -version
+          ruby -v
+          bundle -v
+
+      - name: Run Fastlane
+        run: bundle exec fastlane release
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Hango-ipa
+          path: |
+            build/*.ipa
+          if-no-files-found: error
+
+      - name: Upload dSYM
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Hango-dSYM
+          path: |
+            build/*.dSYM.zip
+          if-no-files-found: ignore
