@@ -137,10 +137,10 @@ platform :ios do
     update_code_signing_settings(
       path: "Hango.xcodeproj",
       use_automatic_signing: false,
-      team_id: "XF9F6JZUN3",
+      team_id: "UHWZBU7HKA",
       targets: ["Hango"],
       code_sign_identity: "Apple Distribution",
-      profile_name: "match AppStore com.pillion.wagon",
+      profile_name: "match AppStore com.hango.hty",
     )
     
 
