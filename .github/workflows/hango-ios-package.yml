@@ -41,6 +41,17 @@ jobs:
           git config --global user.email "ci@example.com"
           git config --global user.name "CI Bot"
 
+      - name: Validate required secrets
+        run: |
+          missing=0
+          for name in FASTLANE_USER ASC_KEY_ID ASC_ISSUER_ID TEAM_ID BUNDLE_ID APP_NAME EXPORT_METHOD MATCH_PASSWORD MATCH_KEYCHAIN_PASSWORD IOS_CERTIFICATES_SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is required"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Configure SSH for certificates repository
         if: env.IOS_CERTIFICATES_SSH_KEY != ''
         run: |
