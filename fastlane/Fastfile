@@ -66,6 +66,12 @@ platform :ios do
       output_directory: "./build",   # 👈 非常关键
       output_name: "Hango.ipa"
     )
+
+    upload_to_testflight(
+      api_key: lane_context[SharedValues::APP_STORE_CONNECT_API_KEY],
+      ipa: "./build/Hango.ipa",
+      skip_waiting_for_build_processing: true,
+    )
   end
 
   lane :on_match do
