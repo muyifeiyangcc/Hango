@@ -66,11 +66,14 @@ jobs:
 
       - name: Create temporary keychain
         run: |
+          KEYCHAIN_PATH="$HOME/Library/Keychains/${MATCH_KEYCHAIN_NAME}-db"
           security delete-keychain "$MATCH_KEYCHAIN_NAME" || true
           security create-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
           security set-keychain-settings -lut 21600 "$MATCH_KEYCHAIN_NAME"
           security unlock-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
-          security list-keychains -d user -s "$MATCH_KEYCHAIN_NAME"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          curl -fsSL -o /tmp/AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          security import /tmp/AppleWWDRCAG3.cer -k "$MATCH_KEYCHAIN_NAME" -T /usr/bin/codesign -T /usr/bin/security || true
 
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
@@ -86,7 +89,10 @@ jobs:
 
       - name: Run Fastlane
         run: |
+          KEYCHAIN_PATH="$HOME/Library/Keychains/${MATCH_KEYCHAIN_NAME}-db"
           security unlock-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$MATCH_KEYCHAIN_NAME"
           bundle exec fastlane release
 
       - name: Upload IPA

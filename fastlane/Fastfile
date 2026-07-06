@@ -61,6 +61,7 @@ platform :ios do
       project: "Hango.xcodeproj",     # 如果是 workspace 就用 workspace
       scheme: ENV["SCHEME"],         # 一定要有
       clean: true,
+      codesigning_identity: "Apple Distribution",
 
       export_method: export_method,
       output_directory: "./build",   # 👈 非常关键
@@ -133,9 +134,10 @@ platform :ios do
     keychain_name = ENV["MATCH_KEYCHAIN_NAME"]
     keychain_password = ENV["MATCH_KEYCHAIN_PASSWORD"]
     if keychain_name && !keychain_name.empty? && keychain_password && !keychain_password.empty?
+      keychain_path = File.expand_path("~/Library/Keychains/#{keychain_name}-db")
       unlock_keychain(path: keychain_name, password: keychain_password)
-      sh("security list-keychains -d user -s \"#{keychain_name}\"")
-      sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k \"#{keychain_password}\" \"#{keychain_name}\" 2>/dev/null || true")
+      sh("security list-keychains -d user -s \"#{keychain_path}\"")
+      sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k \"#{keychain_password}\" \"#{keychain_path}\"")
       sh("security find-identity -v -p codesigning \"#{keychain_name}\"")
     end
 
