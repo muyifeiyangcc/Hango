@@ -68,9 +68,9 @@ jobs:
         run: |
           security delete-keychain "$MATCH_KEYCHAIN_NAME" || true
           security create-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
-          security default-keychain -s "$MATCH_KEYCHAIN_NAME"
-          security unlock-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
           security set-keychain-settings -lut 21600 "$MATCH_KEYCHAIN_NAME"
+          security unlock-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
+          security list-keychains -d user -s "$MATCH_KEYCHAIN_NAME"
 
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
@@ -85,7 +85,9 @@ jobs:
           bundle -v
 
       - name: Run Fastlane
-        run: bundle exec fastlane release
+        run: |
+          security unlock-keychain -p "$MATCH_KEYCHAIN_PASSWORD" "$MATCH_KEYCHAIN_NAME"
+          bundle exec fastlane release
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4

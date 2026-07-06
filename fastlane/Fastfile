@@ -130,6 +130,15 @@ platform :ios do
     profiles = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]
 	  UI.important("profiles = #{profiles}")
 
+    keychain_name = ENV["MATCH_KEYCHAIN_NAME"]
+    keychain_password = ENV["MATCH_KEYCHAIN_PASSWORD"]
+    if keychain_name && !keychain_name.empty? && keychain_password && !keychain_password.empty?
+      unlock_keychain(path: keychain_name, password: keychain_password)
+      sh("security list-keychains -d user -s \"#{keychain_name}\"")
+      sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k \"#{keychain_password}\" \"#{keychain_name}\" 2>/dev/null || true")
+      sh("security find-identity -v -p codesigning \"#{keychain_name}\"")
+    end
+
   end
 
   lane :prepare_gym do
