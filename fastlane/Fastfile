@@ -58,13 +58,13 @@ platform :ios do
     on_match
     prepare_gym
     gym(
-      project: "Hango.xcodeproj",     # 如果是 workspace 就用 workspace
-      scheme: ENV["SCHEME"],         # 一定要有
+      workspace: "Hango.xcworkspace",
+      scheme: ENV["SCHEME"],
       clean: true,
       codesigning_identity: "Apple Distribution",
 
       export_method: export_method,
-      output_directory: "./build",   # 👈 非常关键
+      output_directory: "./build",
       output_name: "Hango.ipa"
     )
 
@@ -80,35 +80,9 @@ platform :ios do
     app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
       issuer_id: ENV["ASC_ISSUER_ID"],
-      # key_content: ENV["ASC_KEY_CONTENT"],
-      # 或者使用key_filepath指向一个文件
       key_filepath: "AuthKey_#{ENV["ASC_KEY_ID"]}.p8",
-      in_house: false # 如果是企业账号，设为true
+      in_house: false
     )
-
-  	# produce( # Alias for the create_app_online action
-    #   username: username,
-    #   app_identifier: bundle_id,
-    #   # app_name: app_name,
-    #   skip_itc: true,
-    #   enable_services: {
-    #     push_notification: "on",
-    #   }
-    #   )
-
-    # match_nuke(
-    #   type: "development",
-    #   )
-
-    # CI 中执行 match 创建新证书上传到 git 报错 Author identity unknown，需要指定 Git 用户身份
-    # sh "git config --global user.email 'ci@example.com'"
-    # sh "git config --global user.name 'CI Bot'"
-
-    # register_devices(
-    #   devices: {
-    #     "iPhone" => "00008110-00066DE92E00402E",
-    #   }
-    # )
 
   	match(
         git_branch: username,
@@ -159,7 +133,6 @@ platform :ios do
       code_sign_identity: "Apple Distribution",
       profile_name: "match AppStore com.hango.hty",
     )
-    
 
   end
 

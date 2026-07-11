@@ -4,6 +4,8 @@
 #import "HangoEULAViewController.h"
 #import "HangoEULAAcceptance.h"
 #import "HangoTabBarView.h"
+#import "HangoWebShellViewController.h"
+#import "HangoLaunchManager.h"
 
 @implementation HangoAppRouter
 
@@ -119,6 +121,10 @@
         [root dismissViewControllerAnimated:NO completion:nil];
     }
     [self setRootViewController:[self welcomeNavigationController] animated:YES];
+}
+
++ (void)showWebShellAnimated:(BOOL)animated {
+    [[HangoLaunchManager shared] enterWebInWindow:[self keyWindow] animated:animated];
 }
 
 @end

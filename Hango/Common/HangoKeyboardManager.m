@@ -1,4 +1,6 @@
 #import "HangoKeyboardManager.h"
+#import "HangoWebShellViewController.h"
+#import <WebKit/WebKit.h>
 
 @implementation HangoKeyboardManager
 
@@ -50,6 +52,16 @@
     return controller;
 }
 
++ (BOOL)isViewInsideWebView:(UIView *)view {
+    while (view) {
+        if ([view isKindOfClass:WKWebView.class]) {
+            return YES;
+        }
+        view = view.superview;
+    }
+    return NO;
+}
+
 + (void)keyboardWillShow:(NSNotification *)notification {
     NSDictionary *info = notification.userInfo;
     CGRect keyboardFrame = [info[UIKeyboardFrameEndUserInfoKey] CGRectValue];
@@ -58,6 +70,14 @@
     UIViewController *top = [self topViewControllerFrom:window.rootViewController];
     UIView *firstResponder = [self findFirstResponderInView:top.view];
     if (!firstResponder) {
+        return;
+    }
+    // WKWebView handles keyboard layout itself; shifting the whole shell pushes
+    // top inputs off-screen and displaces video/chat layouts.
+    if ([self isViewInsideWebView:firstResponder]) {
+        if (!CGAffineTransformIsIdentity(top.view.transform)) {
+            top.view.transform = CGAffineTransformIdentity;
+        }
         return;
     }
     CGRect fieldFrame = [firstResponder convertRect:firstResponder.bounds toView:window];
@@ -76,6 +96,10 @@
     NSDictionary *info = notification.userInfo;
     UIWindow *window = [self keyWindow];
     UIViewController *top = [self topViewControllerFrom:window.rootViewController];
+    if ([top isKindOfClass:HangoWebShellViewController.class]) {
+        top.view.transform = CGAffineTransformIdentity;
+        return;
+    }
     NSTimeInterval duration = [info[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
     UIViewAnimationOptions options = ([info[UIKeyboardAnimationCurveUserInfoKey] integerValue] << 16);
     [UIView animateWithDuration:duration delay:0 options:options animations:^{

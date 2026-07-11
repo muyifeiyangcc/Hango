@@ -10,6 +10,7 @@
 @property (nonatomic, copy) NSString *pageTitle;
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) UIProgressView *progressView;
+@property (nonatomic, assign) BOOL hasCompletedInitialLoad;
 @end
 
 @implementation HangoWebPageViewController
@@ -131,6 +132,10 @@
     if (object != _webView || ![keyPath isEqualToString:NSStringFromSelector(@selector(estimatedProgress))]) {
         return;
     }
+    if (self.hasCompletedInitialLoad) {
+        [self hideProgressBar];
+        return;
+    }
 
     float progress = (float)_webView.estimatedProgress;
     _progressView.progress = progress;
@@ -143,19 +148,35 @@
     }
 }
 
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation {
+    if (self.hasCompletedInitialLoad) {
+        [self hideProgressBar];
+    }
+}
+
 - (void)webView:(WKWebView *)webView didCommitNavigation:(WKNavigation *)navigation {
     [self applyPageBackgroundStyles];
 }
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+    if (!self.hasCompletedInitialLoad) {
+        self.hasCompletedInitialLoad = YES;
+        [self hideProgressBar];
+    }
     [self applyPageBackgroundStyles];
 }
 
 - (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+    if (!self.hasCompletedInitialLoad) {
+        self.hasCompletedInitialLoad = YES;
+    }
     [self hideProgressBar];
 }
 
 - (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+    if (!self.hasCompletedInitialLoad) {
+        self.hasCompletedInitialLoad = YES;
+    }
     [self hideProgressBar];
 }
 

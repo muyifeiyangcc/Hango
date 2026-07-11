@@ -160,6 +160,13 @@ static void HangoIAPHideLoading(void) {
 
 - (void)paymentQueue:(SKPaymentQueue *)queue updatedTransactions:(NSArray<SKPaymentTransaction *> *)transactions {
     for (SKPaymentTransaction *transaction in transactions) {
+        // Only handle native (Sparkle) products. Web/H5 purchases use arbitrary
+        // product ids handled by HangoWebAcquireManager; leave those untouched so we
+        // do not double-finish or trigger the legacy verify path for them.
+        NSString *productId = transaction.payment.productIdentifier;
+        if (productId.length > 0 && HangoIAPSparkleMap()[productId] == nil) {
+            continue;
+        }
         switch (transaction.transactionState) {
             case SKPaymentTransactionStatePurchased:
                 [self completeTransaction:transaction];

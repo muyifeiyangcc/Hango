@@ -1,0 +1,8 @@
+Pods/
+build/
+vendor/bundle/
+.DS_Store
+*.xcuserstate
+xcuserdata/
+fastlane/report.xml
+fastlane/.env

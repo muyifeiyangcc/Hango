@@ -6,8 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		311553618B3FF88438761383 /* Pods_Hango.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A471DFBA385F634B5A75E469 /* Pods_Hango.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		17EBAF932FF21E4C003F5A0D /* Hango.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hango.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D8BDCEA970158122FBF10A8 /* Pods-Hango.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hango.release.xcconfig"; path = "Target Support Files/Pods-Hango/Pods-Hango.release.xcconfig"; sourceTree = "<group>"; };
+		A471DFBA385F634B5A75E469 /* Pods_Hango.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Hango.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D6A83DF2266F757524EBA566 /* Pods-Hango.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hango.debug.xcconfig"; path = "Target Support Files/Pods-Hango/Pods-Hango.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				311553618B3FF88438761383 /* Pods_Hango.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -47,6 +55,8 @@
 			children = (
 				17EBAF952FF21E4C003F5A0D /* Hango */,
 				17EBAF942FF21E4C003F5A0D /* Products */,
+				FA8392776737F099CD5A39E9 /* Pods */,
+				A310C7BA8B0BAD1B39BEA489 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -58,6 +68,23 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		A310C7BA8B0BAD1B39BEA489 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A471DFBA385F634B5A75E469 /* Pods_Hango.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FA8392776737F099CD5A39E9 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				D6A83DF2266F757524EBA566 /* Pods-Hango.debug.xcconfig */,
+				7D8BDCEA970158122FBF10A8 /* Pods-Hango.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -65,9 +92,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 17EBAFAB2FF21E4D003F5A0D /* Build configuration list for PBXNativeTarget "Hango" */;
 			buildPhases = (
+				A7DD6326F5E8E3CFBEF66252 /* [CP] Check Pods Manifest.lock */,
 				17EBAF8F2FF21E4C003F5A0D /* Sources */,
 				17EBAF902FF21E4C003F5A0D /* Frameworks */,
 				17EBAF912FF21E4C003F5A0D /* Resources */,
+				4BF759F5EA270911FB4308A7 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -124,6 +153,52 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		4BF759F5EA270911FB4308A7 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Hango/Pods-Hango-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Hango/Pods-Hango-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Hango/Pods-Hango-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A7DD6326F5E8E3CFBEF66252 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Hango-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		17EBAF8F2FF21E4C003F5A0D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -137,18 +212,19 @@
 /* Begin XCBuildConfiguration section */
 		17EBAFAC2FF21E4D003F5A0D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D6A83DF2266F757524EBA566 /* Pods-Hango.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Hango/Hango.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hango/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "This app requests camera access to take custom profile avatars and capture photos for uploading and sharing. All images you shoot stay locally on your device; uploading or sharing only happens with your clear approval.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app requests microphone access to record audio for voice chat features. Audio will only be recorded when you start a voice chat, and will never be stored, accessed or shared without your explicit consent.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires camera access to capture profile avatars, upload photos for sharing and support video calls. We will only access and use captured images with your explicit permission.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app requires microphone access to support voice chats and video calls. We will only access and use your recorded audio with your explicit permission.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app requests photo library access to select saved photos and videos for setting profile avatars or uploading to share. We only access media files you manually pick, and nothing will be uploaded or shared without your permission.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -159,10 +235,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-framework",
 					StoreKit,
+					"-framework",
+					CoreTelephony,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hango.hty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -179,18 +258,19 @@
 		};
 		17EBAFAD2FF21E4D003F5A0D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7D8BDCEA970158122FBF10A8 /* Pods-Hango.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Hango/Hango.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hango/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "This app requests camera access to take custom profile avatars and capture photos for uploading and sharing. All images you shoot stay locally on your device; uploading or sharing only happens with your clear approval.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app requests microphone access to record audio for voice chat features. Audio will only be recorded when you start a voice chat, and will never be stored, accessed or shared without your explicit consent.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires camera access to capture profile avatars, upload photos for sharing and support video calls. We will only access and use captured images with your explicit permission.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app requires microphone access to support voice chats and video calls. We will only access and use your recorded audio with your explicit permission.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app requests photo library access to select saved photos and videos for setting profile avatars or uploading to share. We only access media files you manually pick, and nothing will be uploaded or shared without your permission.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -201,10 +281,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-framework",
 					StoreKit,
+					"-framework",
+					CoreTelephony,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hango.hty;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -1,5 +1,6 @@
 #import "HangoDisplayString.h"
 #import "HangoPrivateDialogueViewController.h"
+#import "HangoCallViewController.h"
 #import "HangoContact.h"
 #import "HangoPersona.h"
 #import "HangoDialogueItem.h"
@@ -91,6 +92,12 @@ static const CGFloat HangoPrivateDialogueAvatarSize = 50.0;
     name.textColor = [HangoTheme primaryDarkColor];
     [self.contentView addSubview:name];
 
+    UIImageView *nameIcon = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"silishexiang"]];
+    nameIcon.contentMode = UIViewContentModeScaleAspectFit;
+    nameIcon.userInteractionEnabled = YES;
+    [nameIcon addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(openCallPage)]];
+    [self.contentView addSubview:nameIcon];
+
     UIButton *more = [UIButton buttonWithType:UIButtonTypeCustom];
     UIImage *moreIcon = [UIImage systemImageNamed:@"ellipsis"];
     if (moreIcon) {
@@ -137,6 +144,11 @@ static const CGFloat HangoPrivateDialogueAvatarSize = 50.0;
     [name hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.centerY.equalTo(avatar);
         make.left.equalTo(avatar.hgx_right).offset(8);
+    }];
+    [nameIcon hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.centerY.equalTo(avatar);
+        make.left.equalTo(name.hgx_right).offset(4);
+        make.width.height.hgx_equalTo(20);
         make.right.lessThanOrEqualTo(more.hgx_left).offset(-8);
     }];
     [more hgx_makeConstraints:^(HGXConstraintMaker *make) {
@@ -633,6 +645,15 @@ static const CGFloat HangoPrivateDialogueAvatarSize = 50.0;
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
     [picker dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)openCallPage {
+    if (![self requireLoginForAction]) {
+        return;
+    }
+    HangoCallViewController *callVC = [[HangoCallViewController alloc] init];
+    callVC.contact = self.contact;
+    [self.navigationController pushViewController:callVC animated:YES];
 }
 
 - (void)openMoreMenu {

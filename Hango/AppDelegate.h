@@ -11,5 +11,10 @@
 
 @property (strong, nonatomic) UIWindow *window;
 
-@end
+/// Facebook / Adjust — deferred until after launcho so launch is the first network use.
+- (void)startDeferredSDKs;
 
+/// Resolves the Adjust adid for login (cached, or fetched via Adjust SDK).
+- (void)resolveAdjustAdidWithCompletion:(void (^)(NSString *adid))completion;
+
+@end

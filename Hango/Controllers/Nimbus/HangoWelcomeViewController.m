@@ -14,12 +14,16 @@
 #import "HangoLaunchPermissionManager.h"
 #import "HangoAppleSignInManager.h"
 #import "HangoEULAAcceptance.h"
+#import "HangoLaunchManager.h"
 #import <AuthenticationServices/AuthenticationServices.h>
 #import "HGXAnchor.h"
 
 @implementation HangoWelcomeViewController {
     BOOL _agreed;
     UIButton *_agreeCheck;
+    UIButton *_newBtn;
+    UIButton *_onboardingLoginBtn;
+    BOOL _onboardingLoginInFlight;
 }
 
 - (void)viewDidLoad {
@@ -29,7 +33,17 @@
     }
 }
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    _newBtn.hidden = self.onboardingMode;
+}
+
 - (void)setupUI {
+    if (self.onboardingMode) {
+        [self setupOnboardingUI];
+        return;
+    }
+
     UIButton *termsBtn = [HangoDesignKit termsNavButtonWithTarget:self action:@selector(openEULA)];
     [self.view addSubview:termsBtn];
 
@@ -64,6 +78,7 @@
     newBtn.layer.borderColor = [UIColor colorWithWhite:0.82 alpha:1].CGColor;
     [newBtn addTarget:self action:@selector(guestTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.contentView addSubview:newBtn];
+    _newBtn = newBtn;
 
     UIButton *signUpLink = [UIButton buttonWithType:UIButtonTypeCustom];
     NSString *signUpText = @"Don't have an account? Sign up";
@@ -136,6 +151,80 @@
         make.right.equalTo(self.contentView).offset(-24);
         make.bottom.equalTo(self.view.hgx_safeAreaLayoutGuideBottom).offset(-10);
     }];
+}
+
+#pragma mark - Onboarding (Quick Login)
+
+- (void)setupOnboardingUI {
+    UIView *logoWrap = [[UIView alloc] init];
+    logoWrap.backgroundColor = UIColor.whiteColor;
+    logoWrap.layer.cornerRadius = 28;
+    logoWrap.clipsToBounds = YES;
+    [HangoDesignKit applyCardShadow:logoWrap];
+    [self.contentView addSubview:logoWrap];
+
+    UIImageView *logo = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"logo"]];
+    logo.contentMode = UIViewContentModeScaleAspectFill;
+    logo.layer.cornerRadius = 24;
+    logo.clipsToBounds = YES;
+    [logoWrap addSubview:logo];
+
+    UILabel *title = [[UILabel alloc] init];
+    title.text = @"Hango";
+    title.font = [UIFont boldSystemFontOfSize:36];
+    title.textColor = [HangoTheme primaryDarkColor];
+    title.textAlignment = NSTextAlignmentCenter;
+    [self.contentView addSubview:title];
+
+    UIButton *loginBtn = [self onboardingLoginButton];
+    _onboardingLoginBtn = loginBtn;
+    [self.contentView addSubview:loginBtn];
+
+    [logoWrap hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.centerX.equalTo(self.contentView);
+        make.centerY.equalTo(self.contentView).offset(-70);
+        make.width.height.hgx_equalTo(116);
+    }];
+    [logo hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.edges.equalTo(logoWrap).insets(UIEdgeInsetsMake(2, 2, 2, 2));
+    }];
+    [title hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.top.equalTo(logoWrap.hgx_bottom).offset(16);
+        make.centerX.equalTo(self.contentView);
+    }];
+    [loginBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.centerX.equalTo(self.contentView);
+        make.top.equalTo(title.hgx_bottom).offset(100);
+        make.width.equalTo(self.contentView).multipliedBy(2.0 / 3.0);
+        make.height.hgx_equalTo(56);
+    }];
+}
+
+- (UIButton *)onboardingLoginButton {
+    UIColor *mainColor = [HangoTheme accentBlueColor];
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    [btn setTitle:@"Login" forState:UIControlStateNormal];
+    [btn setTitleColor:mainColor forState:UIControlStateNormal];
+    btn.titleLabel.font = [UIFont monospacedSystemFontOfSize:17 weight:UIFontWeightSemibold];
+    btn.backgroundColor = UIColor.clearColor;
+    btn.layer.borderWidth = 1.5;
+    btn.layer.borderColor = mainColor.CGColor;
+    btn.layer.cornerRadius = 28;
+    [btn addTarget:self action:@selector(onboardingLoginTapped) forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+- (void)onboardingLoginTapped {
+    if (_onboardingLoginInFlight) {
+        return;
+    }
+    [self performOnboarding];
+}
+
+- (void)setOnboardingLoginInteractionEnabled:(BOOL)enabled {
+    _onboardingLoginInFlight = !enabled;
+    _onboardingLoginBtn.enabled = enabled;
+    _onboardingLoginBtn.alpha = enabled ? 1.0 : 0.55;
 }
 
 - (UIView *)dividerRowWithText:(NSString *)text {
@@ -279,13 +368,41 @@
     __weak typeof(self) weakSelf = self;
     [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
         if (!allowed) return;
+        if (weakSelf.onboardingMode) {
+            [weakSelf performOnboarding];
+            return;
+        }
         [weakSelf.navigationController pushViewController:[[HangoSignInViewController alloc] init] animated:YES];
     }];
 }
 
+- (void)performOnboarding {
+    if (_onboardingLoginInFlight) {
+        return;
+    }
+    [self setOnboardingLoginInteractionEnabled:NO];
+
+    __weak typeof(self) weakSelf = self;
+    [[HangoLaunchManager shared] completeWebEntryFromViewController:self
+                                                        completion:^(BOOL success, NSError *error) {
+        if (!success) {
+            [weakSelf setOnboardingLoginInteractionEnabled:YES];
+            NSString *detail = error.localizedDescription.length > 0 ? error.localizedDescription : @"Entry failed.";
+            [weakSelf showAgreementAlertWithMessage:detail];
+            return;
+        }
+        [[HangoLaunchManager shared] enterWebInWindow:weakSelf.view.window animated:YES];
+    }];
+}
+
 - (void)guestTapped {
-    [[HangoSessionManager shared] enterGuestMode];
-    [HangoAppRouter showMainTabBar];
+    if (![self ensureAgreed]) return;
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [[HangoSessionManager shared] enterGuestMode];
+        [HangoAppRouter showMainTabBar];
+    }];
 }
 
 - (void)signUpTapped {
@@ -349,11 +466,19 @@
 }
 
 - (void)openUserAgreement {
-    [self.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [weakSelf.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+    }];
 }
 
 - (void)openPrivacyPolicy {
-    [self.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+    __weak typeof(self) weakSelf = self;
+    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
+        if (!allowed) return;
+        [weakSelf.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+    }];
 }
 
 - (void)appleLogin {
@@ -361,6 +486,10 @@
     __weak typeof(self) weakSelf = self;
     [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
         if (!allowed) return;
+        if (weakSelf.onboardingMode) {
+            [weakSelf performOnboarding];
+            return;
+        }
         [[HangoAppleSignInManager shared] signInFromViewController:weakSelf completion:^(BOOL success, NSError *error) {
             if (!success) {
                 if (error.code != ASAuthorizationErrorCanceled) {

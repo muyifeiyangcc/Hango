@@ -12,6 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)showMainTabBarSelectingProfileTab;
 + (void)showAuthEntry;
 + (void)showWelcome;
++ (void)showWebShellAnimated:(BOOL)animated;
 
 @end
 
