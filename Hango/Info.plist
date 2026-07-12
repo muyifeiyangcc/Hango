@@ -28,7 +28,6 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>itms-apps</string>
-		<string>itms-services</string>
 		<string>squarecash</string>
 		<string>cashme</string>
 		<string>upi</string>

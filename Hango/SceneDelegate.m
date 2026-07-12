@@ -1,6 +1,6 @@
 #import "SceneDelegate.h"
 #import "HangoTheme.h"
-#import "HangoLaunchManager.h"
+#import "HangoStartupCoordinator.h"
 #import "HangoAppConfig.h"
 #import "AppDelegate.h"
 
@@ -14,9 +14,9 @@
     self.window.backgroundColor = [HangoTheme backgroundTopColor];
     ((AppDelegate *)UIApplication.sharedApplication.delegate).window = self.window;
 
-    HangoLaunchManager *launchManager = [HangoLaunchManager shared];
-    [launchManager showLaunchSplashInWindow:self.window];
-    [launchManager resolveLaunchDecisionAndApplyToWindow:self.window];
+    HangoStartupCoordinator *startupCoordinator = [HangoStartupCoordinator shared];
+    [startupCoordinator showLaunchSplashInWindow:self.window];
+    [startupCoordinator resolveLaunchDecisionAndApplyToWindow:self.window];
 }
 
 @end

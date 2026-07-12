@@ -23,7 +23,9 @@
 - (void)startDeferredSDKs {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSLog(@"[HangoLaunch] starting deferred SDKs (after launcho)");
+#if DEBUG
+        NSLog(@"[HangoStartup] starting deferred SDKs");
+#endif
         [[FBSDKApplicationDelegate sharedInstance] application:UIApplication.sharedApplication
                                 didFinishLaunchingWithOptions:self.storedLaunchOptions];
         [self setupAdjust];

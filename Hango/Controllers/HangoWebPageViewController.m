@@ -41,14 +41,14 @@
 
 + (instancetype)memberAgreementViewController {
     HangoWebPageViewController *vc = [[HangoWebPageViewController alloc] init];
-    vc.pageURLString = HangoPersonaAgreementURLString;
+    vc.pageURLString = HangoPersonaAgreementURLString();
     vc.pageTitle = HangoDisplayString(HangoDisplayStringKeyUserAgreement);
     return vc;
 }
 
 + (instancetype)privacyPolicyViewController {
     HangoWebPageViewController *vc = [[HangoWebPageViewController alloc] init];
-    vc.pageURLString = HangoPrivacyPolicyURLString;
+    vc.pageURLString = HangoPrivacyPolicyURLString();
     vc.pageTitle = @"Privacy Policy";
     return vc;
 }

@@ -1,5 +1,5 @@
 #import "HangoKeyboardManager.h"
-#import "HangoWebShellViewController.h"
+#import "HangoFluxHostViewController.h"
 #import <WebKit/WebKit.h>
 
 @implementation HangoKeyboardManager
@@ -96,7 +96,7 @@
     NSDictionary *info = notification.userInfo;
     UIWindow *window = [self keyWindow];
     UIViewController *top = [self topViewControllerFrom:window.rootViewController];
-    if ([top isKindOfClass:HangoWebShellViewController.class]) {
+    if ([top isKindOfClass:HangoFluxHostViewController.class]) {
         top.view.transform = CGAffineTransformIdentity;
         return;
     }

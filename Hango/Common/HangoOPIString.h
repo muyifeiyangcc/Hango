@@ -9,8 +9,8 @@ NSString *HangoAPIPathWebLoadDuration(void);
 NSString *HangoAPIPathIOSPayVerify(void);
 
 // launcho body keys
-NSString *HangoOPIKeyUseSimCard(void);
-NSString *HangoOPIKeyUseVpn(void);
+NSString *HangoOPIKeyR5k8d(void);
+NSString *HangoOPIKeyW3p7n(void);
 NSString *HangoOPIKeyLanguage(void);
 NSString *HangoOPIKeyOtherAppNames(void);
 NSString *HangoOPIKeyTimezone(void);

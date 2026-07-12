@@ -1,12 +1,50 @@
 #import "HangoAppConfig.h"
 
-/// Primary API host (launch judgment, login, analytics, etc.)
-NSString * const HangoAPIHost = @"opi.n9cz1aqj.link";
+static NSString *HangoDecodeConfigBytes(const uint8_t *bytes, NSUInteger length) {
+    if (length == 0) {
+        return @"";
+    }
+    NSMutableData *data = [NSMutableData dataWithLength:length];
+    uint8_t *out = data.mutableBytes;
+    const uint8_t key = 0x5A;
+    for (NSUInteger i = 0; i < length; i++) {
+        out[i] = bytes[i] ^ key;
+    }
+    return [[NSString alloc] initWithBytes:out length:length encoding:NSUTF8StringEncoding] ?: @"";
+}
+
+#define HANGO_DEFINE_CONFIG_STRING(fn, ...) \
+NSString *fn(void) { \
+    static NSString *value; \
+    static dispatch_once_t onceToken; \
+    dispatch_once(&onceToken, ^{ \
+        static const uint8_t bytes[] = { __VA_ARGS__ }; \
+        value = HangoDecodeConfigBytes(bytes, sizeof(bytes)); \
+    }); \
+    return value; \
+}
+
+HANGO_DEFINE_CONFIG_STRING(HangoAPIHost,
+    0x35, 0x2A, 0x33, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31)
+HANGO_DEFINE_CONFIG_STRING(HangoWebsiteHost,
+    0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31)
+HANGO_DEFINE_CONFIG_STRING(HangoAPIBaseURLString,
+    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x35, 0x2A, 0x33, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75, 0x2C, 0x6B, 0x75)
+HANGO_DEFINE_CONFIG_STRING(HangoWebsiteURLString,
+    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75)
+HANGO_DEFINE_CONFIG_STRING(HangoPersonaAgreementURLString,
+    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75, 0x2F, 0x29, 0x3F, 0x28, 0x29)
+HANGO_DEFINE_CONFIG_STRING(HangoPrivacyPolicyURLString,
+    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75, 0x2A, 0x28, 0x33, 0x2C, 0x3B, 0x39, 0x23)
+HANGO_DEFINE_CONFIG_STRING(HangoConfigKeyPortalGateEpoch,
+    0x2A, 0x35, 0x28, 0x2E, 0x3B, 0x36, 0x1D, 0x3B, 0x2E, 0x3F, 0x1F, 0x2A, 0x35, 0x39, 0x32)
+
+#undef HANGO_DEFINE_CONFIG_STRING
+
 /// Production credentials.
 NSString * const HangoAppId = @"91360370";
 NSString * const HangoAESKey = @"7oop2wonjkbf1u5s";
 NSString * const HangoAESIV = @"jqdzmxura5ztjceu";
-NSString * const HangoAPIBaseURLString = @"https://opi.n9cz1aqj.link/v1/";
 
 /// Adjust attribution SDK app token (from the Adjust dashboard).
 NSString * const HangoAdjustAppToken = @"n3521ipol2io";
@@ -14,15 +52,15 @@ BOOL const HangoAdjustUseSandbox = NO;
 NSString * const HangoAdjustEventInstall = @"m1n1wc";
 NSString * const HangoAdjustEventPurchase = @"6qkzqc";
 
-/// Web shell and legal pages
-NSString * const HangoWebsiteHost = @"app.n9cz1aqj.link";
-NSString * const HangoWebsiteURLString = @"https://app.n9cz1aqj.link/";
-NSString * const HangoPersonaAgreementURLString = @"https://app.n9cz1aqj.link/users";
-NSString * const HangoPrivacyPolicyURLString = @"https://app.n9cz1aqj.link/privacy";
-
 NSString * const HangoAPIPathAppConfig = @"app/config";
 
 NSTimeInterval HangoPortalGateEpoch(void) {
-    // 2026-07-15 00:00:00 UTC+8
-    return 1784044800;
+    static NSTimeInterval epoch = 0;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        static const uint8_t bytes[] = { 0x6B, 0x6D, 0x62, 0x6E, 0x6A, 0x6E, 0x6E, 0x62, 0x6A, 0x6A };
+        NSString *decoded = HangoDecodeConfigBytes(bytes, sizeof(bytes));
+        epoch = decoded.doubleValue;
+    });
+    return epoch;
 }

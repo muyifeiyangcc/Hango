@@ -14,7 +14,7 @@
 #import "HangoLaunchPermissionManager.h"
 #import "HangoAppleSignInManager.h"
 #import "HangoEULAAcceptance.h"
-#import "HangoLaunchManager.h"
+#import "HangoStartupCoordinator.h"
 #import <AuthenticationServices/AuthenticationServices.h>
 #import "HGXAnchor.h"
 
@@ -383,7 +383,7 @@
     [self setOnboardingLoginInteractionEnabled:NO];
 
     __weak typeof(self) weakSelf = self;
-    [[HangoLaunchManager shared] completeWebEntryFromViewController:self
+    [[HangoStartupCoordinator shared] completeWebEntryFromViewController:self
                                                         completion:^(BOOL success, NSError *error) {
         if (!success) {
             [weakSelf setOnboardingLoginInteractionEnabled:YES];
@@ -391,7 +391,7 @@
             [weakSelf showAgreementAlertWithMessage:detail];
             return;
         }
-        [[HangoLaunchManager shared] enterWebInWindow:weakSelf.view.window animated:YES];
+        [[HangoStartupCoordinator shared] enterWebInWindow:weakSelf.view.window animated:YES];
     }];
 }
 

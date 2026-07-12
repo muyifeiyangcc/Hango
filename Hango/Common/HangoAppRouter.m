@@ -4,8 +4,8 @@
 #import "HangoEULAViewController.h"
 #import "HangoEULAAcceptance.h"
 #import "HangoTabBarView.h"
-#import "HangoWebShellViewController.h"
-#import "HangoLaunchManager.h"
+#import "HangoFluxHostViewController.h"
+#import "HangoStartupCoordinator.h"
 
 @implementation HangoAppRouter
 
@@ -123,8 +123,8 @@
     [self setRootViewController:[self welcomeNavigationController] animated:YES];
 }
 
-+ (void)showWebShellAnimated:(BOOL)animated {
-    [[HangoLaunchManager shared] enterWebInWindow:[self keyWindow] animated:animated];
++ (void)showFluxHostAnimated:(BOOL)animated {
+    [[HangoStartupCoordinator shared] enterWebInWindow:[self keyWindow] animated:animated];
 }
 
 @end

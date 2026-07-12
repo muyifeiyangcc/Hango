@@ -10,7 +10,7 @@ static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
     if ([NSURLProtocol propertyForKey:kHangoAPIRequestHandledKey inRequest:request]) {
         return NO;
     }
-    if (![request.URL.host isEqualToString:HangoAPIHost]) {
+    if (![request.URL.host isEqualToString:HangoAPIHost()]) {
         return NO;
     }
     // Only the legacy local-simulation endpoints stay stubbed; the real launch/login
@@ -34,7 +34,7 @@ static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
             HangoOPIResponseKeyCode(): HangoOPISuccessCode(),
             HangoOPIResponseKeyMessage(): @"success",
             HangoOPIResponseKeyData(): @{
-                HangoOPIResponseKeyOpenValue(): HangoWebsiteURLString,
+                HangoOPIResponseKeyOpenValue(): HangoWebsiteURLString(),
                 @"loginFlag": @"1",
             },
         };
@@ -44,7 +44,7 @@ static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
             @"code": @0,
             @"message": @"success",
             @"data": @{
-                @"portalGateEpoch": @(HangoPortalGateEpoch()),
+                HangoConfigKeyPortalGateEpoch(): @(HangoPortalGateEpoch()),
             },
         };
     }

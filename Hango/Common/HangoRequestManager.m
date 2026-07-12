@@ -71,7 +71,7 @@
 }
 
 - (void)preflightDNSForAPIHostWithCompletion:(void (^)(BOOL resolved))completion {
-    NSString *host = HangoAPIHost;
+    NSString *host = HangoAPIHost();
     if (host.length == 0) {
         if (completion) {
             completion(NO);
@@ -228,11 +228,11 @@
             parameters:(NSDictionary *)parameters
             completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
     NSString *urlString = [path hasPrefix:@"/"]
-        ? [NSString stringWithFormat:@"https://%@%@", HangoAPIHost, path]
+        ? [NSString stringWithFormat:@"https://%@%@", HangoAPIHost(), path]
         : nil;
     NSURL *url = urlString.length > 0
         ? [NSURL URLWithString:urlString]
-        : [NSURL URLWithString:path relativeToURL:[NSURL URLWithString:HangoAPIBaseURLString]];
+        : [NSURL URLWithString:path relativeToURL:[NSURL URLWithString:HangoAPIBaseURLString()]];
     [self postEncryptedJSONToURL:url parameters:parameters completion:completion];
 }
 
@@ -381,7 +381,7 @@
 
 - (void)fetchLaunchEligibilityWithCompletion:(HangoAPIResponseHandler)completion {
     NSDictionary *payload = [HangoLaunchEnvironmentHelper launchRequestPayload];
-    NSString *urlString = [NSString stringWithFormat:@"https://%@%@", HangoAPIHost, HangoAPIPathAppLaunch()];
+    NSString *urlString = [NSString stringWithFormat:@"https://%@%@", HangoAPIHost(), HangoAPIPathAppLaunch()];
     NSURL *url = [NSURL URLWithString:urlString];
     [self postEncryptedJSONToURL:url
                       parameters:payload
