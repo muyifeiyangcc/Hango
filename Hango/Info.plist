@@ -10,21 +10,7 @@
 				<string>hango</string>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>fb1546074246864793</string>
-			</array>
-		</dict>
 	</array>
-	<key>FacebookAppID</key>
-	<string>1546074246864793</string>
-	<key>FacebookAutoLogAppEventsEnabled</key>
-	<false/>
-	<key>FacebookClientToken</key>
-	<string>8219065032df8aed9c1bd530f79396db</string>
-	<key>FacebookDisplayName</key>
-	<string>Hango</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>itms-apps</string>

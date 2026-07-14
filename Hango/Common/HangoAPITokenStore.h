@@ -14,10 +14,6 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSString *)initialPassword;
 + (void)setInitialPassword:(nullable NSString *)password;
 
-/// Adjust attribution ID (set once the Adjust SDK resolves it).
-+ (NSString *)adjustAdid;
-+ (void)setAdjustAdid:(nullable NSString *)adid;
-
 @end
 
 NS_ASSUME_NONNULL_END

@@ -58,7 +58,7 @@ platform :ios do
     on_match
     prepare_gym
     gym(
-      workspace: "Hango.xcworkspace",
+      project: "Hango.xcodeproj",
       scheme: ENV["SCHEME"],
       clean: true,
       codesigning_identity: "Apple Distribution",

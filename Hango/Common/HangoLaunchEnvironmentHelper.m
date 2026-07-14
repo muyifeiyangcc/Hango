@@ -128,10 +128,9 @@ static NSArray<NSString *> *HangoEnvPathTokenHints(void) {
     return [self launchOPIBody];
 }
 
-+ (NSDictionary *)loginRequestPayloadWithAdjustAdid:(NSString *)adjustAdid {
++ (NSDictionary *)loginRequestPayload {
     return @{
         HangoOPILoginBodyKeyDeviceNo(): [HangoDeviceHelper deviceNo],
-        HangoOPILoginKeyAdjustAdid(): adjustAdid ?: @"",
     };
 }
 

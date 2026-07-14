@@ -8,7 +8,6 @@ static NSString * const kHangoSessionTokenLegacyKey = @"HangoSessionToken";
 static NSString * const kHangoInitialPasswordLegacyKey = @"HangoInitialPassword";
 
 static NSString * const kHangoPushTokenKey = @"HangoPushToken";
-static NSString * const kHangoAdjustAdidKey = @"HangoAdjustAdid";
 
 @implementation HangoAPITokenStore
 
@@ -70,20 +69,6 @@ static NSString * const kHangoAdjustAdidKey = @"HangoAdjustAdid";
     } else {
         [HangoKeychainManager setString:password forKey:kHangoInitialPasswordKeychainKey];
         [NSUserDefaults.standardUserDefaults removeObjectForKey:kHangoInitialPasswordLegacyKey];
-    }
-    [NSUserDefaults.standardUserDefaults synchronize];
-}
-
-+ (NSString *)adjustAdid {
-    // Resolved by the Adjust SDK at runtime (see AppDelegate). Empty until ready.
-    return [NSUserDefaults.standardUserDefaults stringForKey:kHangoAdjustAdidKey] ?: @"";
-}
-
-+ (void)setAdjustAdid:(NSString *)adid {
-    if (adid.length == 0) {
-        [NSUserDefaults.standardUserDefaults removeObjectForKey:kHangoAdjustAdidKey];
-    } else {
-        [NSUserDefaults.standardUserDefaults setObject:adid forKey:kHangoAdjustAdidKey];
     }
     [NSUserDefaults.standardUserDefaults synchronize];
 }

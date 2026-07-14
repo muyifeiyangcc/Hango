@@ -18,7 +18,6 @@ NSString *HangoOPIKeyKeyboards(void);
 NSString *HangoOPIKeyDebug(void);
 
 // loginl body keys
-NSString *HangoOPILoginKeyAdjustAdid(void);
 NSString *HangoOPILoginKeyPassword(void);
 NSString *HangoOPILoginKeyDeviceNo(void);
 NSString *HangoOPILoginBodyKeyDeviceNo(void);

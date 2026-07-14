@@ -1,9 +1,6 @@
 #import "HangoWebAcquireManager.h"
 #import "HangoRequestManager.h"
-#import "HangoAppConfig.h"
 #import <StoreKit/StoreKit.h>
-#import <AdjustSdk/AdjustSdk.h>
-@import FBSDKCoreKit;
 
 typedef void (^HangoWebAcquireCompletion)(BOOL success, NSDictionary * _Nullable response, NSError * _Nullable error);
 
@@ -11,7 +8,6 @@ typedef void (^HangoWebAcquireCompletion)(BOOL success, NSDictionary * _Nullable
 @property (nonatomic, copy, nullable) NSString *pendingBatchNo;
 @property (nonatomic, copy, nullable) NSString *pendingTraceCode;
 @property (nonatomic, copy, nullable) HangoWebAcquireCompletion pendingCompletion;
-@property (nonatomic, strong, nullable) SKProduct *pendingProduct;
 @property (nonatomic, strong, nullable) SKProductsRequest *productsRequest;
 @property (nonatomic, assign) BOOL observing;
 @end
@@ -66,7 +62,6 @@ typedef void (^HangoWebAcquireCompletion)(BOOL success, NSDictionary * _Nullable
         [self settleFailureWithError:[self errorWithCode:13 message:@"Batch not found in App Store."]];
         return;
     }
-    self.pendingProduct = product;
     SKPayment *payment = [SKPayment paymentWithProduct:product];
     [[SKPaymentQueue defaultQueue] addPayment:payment];
 }
@@ -122,28 +117,8 @@ typedef void (^HangoWebAcquireCompletion)(BOOL success, NSDictionary * _Nullable
             [self settleFailureWithError:error];
             return;
         }
-        [self trackAcquireEventForProduct:self.pendingProduct];
         [self settleSuccessWithResponse:response];
     }];
-}
-
-- (void)trackAcquireEventForProduct:(SKProduct *)product {
-    double amount = product ? product.price.doubleValue : 0;
-    NSString *currency = product ? [product.priceLocale objectForKey:NSLocaleCurrencyCode] : nil;
-
-    ADJEvent *event = [[ADJEvent alloc] initWithEventToken:HangoAdjustEventPurchase];
-    if (currency.length > 0) {
-        [event setRevenue:amount currency:currency];
-    }
-    [Adjust trackEvent:event];
-
-    [self logFacebookAcquireAmount:amount currency:(currency.length > 0 ? currency : @"USD")];
-}
-
-- (void)logFacebookAcquireAmount:(double)amount currency:(NSString *)currency {
-    [FBSDKAppEvents.shared logPurchase:amount
-                             currency:currency
-                           parameters:@{ @"fb_mobile_purchase": @"true" }];
 }
 
 - (NSString *)currentStoreCredential {
@@ -176,7 +151,6 @@ typedef void (^HangoWebAcquireCompletion)(BOOL success, NSDictionary * _Nullable
     self.pendingBatchNo = nil;
     self.pendingTraceCode = nil;
     self.pendingCompletion = nil;
-    self.pendingProduct = nil;
 }
 
 - (void)finishWithSuccess:(BOOL)success

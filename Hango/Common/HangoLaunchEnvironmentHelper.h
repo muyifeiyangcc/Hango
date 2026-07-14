@@ -8,7 +8,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSDictionary *)launchRequestPayload;
 
 /// App login request payload (encrypted flat opiBody; opiUrl is the POST path).
-+ (NSDictionary *)loginRequestPayloadWithAdjustAdid:(NSString *)adjustAdid;
++ (NSDictionary *)loginRequestPayload;
 
 @end
 

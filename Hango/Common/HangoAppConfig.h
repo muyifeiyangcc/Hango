@@ -7,15 +7,6 @@ FOUNDATION_EXPORT NSString *HangoAPIHost(void);
 FOUNDATION_EXPORT NSString * const HangoAppId;
 FOUNDATION_EXPORT NSString * const HangoAESKey;
 FOUNDATION_EXPORT NSString * const HangoAESIV;
-/// Adjust attribution SDK app token. Replace with the real token from the
-/// Adjust dashboard before release.
-FOUNDATION_EXPORT NSString * const HangoAdjustAppToken;
-/// NO for production (`ADJEnvironmentProduction`), YES for sandbox testing.
-FOUNDATION_EXPORT BOOL const HangoAdjustUseSandbox;
-/// Adjust event token fired once on first install (attribution callback).
-FOUNDATION_EXPORT NSString * const HangoAdjustEventInstall;
-/// Adjust event token fired on a successful purchase (with revenue).
-FOUNDATION_EXPORT NSString * const HangoAdjustEventPurchase;
 
 FOUNDATION_EXPORT NSString *HangoWebsiteHost(void);
 FOUNDATION_EXPORT NSString *HangoWebsiteURLString(void);

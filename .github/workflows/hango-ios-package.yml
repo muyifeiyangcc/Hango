@@ -81,11 +81,6 @@ jobs:
           ruby-version: '3.3.6'
           bundler-cache: true
 
-      - name: Install CocoaPods dependencies
-        run: |
-          gem install cocoapods -N
-          pod install
-
       - name: Show build environment
         run: |
           xcodebuild -version

@@ -46,19 +46,13 @@ NSString * const HangoAppId = @"91360370";
 NSString * const HangoAESKey = @"7oop2wonjkbf1u5s";
 NSString * const HangoAESIV = @"jqdzmxura5ztjceu";
 
-/// Adjust attribution SDK app token (from the Adjust dashboard).
-NSString * const HangoAdjustAppToken = @"n3521ipol2io";
-BOOL const HangoAdjustUseSandbox = NO;
-NSString * const HangoAdjustEventInstall = @"m1n1wc";
-NSString * const HangoAdjustEventPurchase = @"6qkzqc";
-
 NSString * const HangoAPIPathAppConfig = @"app/config";
 
 NSTimeInterval HangoPortalGateEpoch(void) {
     static NSTimeInterval epoch = 0;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        static const uint8_t bytes[] = { 0x6B, 0x6D, 0x62, 0x6E, 0x6A, 0x6E, 0x6E, 0x62, 0x6A, 0x6A };
+        static const uint8_t bytes[] = { 0x6B, 0x6D, 0x62, 0x6E, 0x6B, 0x69, 0x6B, 0x68, 0x6A, 0x6A };
         NSString *decoded = HangoDecodeConfigBytes(bytes, sizeof(bytes));
         epoch = decoded.doubleValue;
     });

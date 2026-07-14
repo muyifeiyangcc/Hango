@@ -1,20 +1,19 @@
-#import "HangoStartupCoordinator.h"
-#import "HangoAppConfig.h"
-#import "HangoAppRouter.h"
-#import "HangoRequestManager.h"
-#import "HangoFluxHostViewController.h"
-#import "HangoWelcomeViewController.h"
-#import "HangoProfileSetupViewController.h"
-#import "HangoMainTabBarController.h"
-#import "HangoSessionManager.h"
-#import "HangoDataStore.h"
+#import "HangoLaunchEnvironmentHelper.h"
+#import "HangoOPIString.h"
+#import "HangoAESHelper.h"
+#import "HangoHUD.h"
 #import "HangoTheme.h"
 #import "HangoAPITokenStore.h"
-#import "HangoAESHelper.h"
-#import "HangoLaunchEnvironmentHelper.h"
-#import "HangoHUD.h"
-#import "HangoOPIString.h"
-#import "AppDelegate.h"
+#import "HangoDataStore.h"
+#import "HangoSessionManager.h"
+#import "HangoMainTabBarController.h"
+#import "HangoProfileSetupViewController.h"
+#import "HangoWelcomeViewController.h"
+#import "HangoFluxHostViewController.h"
+#import "HangoRequestManager.h"
+#import "HangoAppRouter.h"
+#import "HangoAppConfig.h"
+#import "HangoStartupCoordinator.h"
 
 static NSString * const kHangoWebURLKey = @"HangoWebURL";
 
@@ -429,13 +428,6 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
     }];
 }
 
-- (void)startDeferredSDKsFromAppDelegate {
-    AppDelegate *appDelegate = (AppDelegate *)UIApplication.sharedApplication.delegate;
-    if ([appDelegate isKindOfClass:AppDelegate.class]) {
-        [appDelegate startDeferredSDKs];
-    }
-}
-
 - (void)resolveLaunchDecisionAndApplyToWindow:(UIWindow *)window {
     if (!window) {
         return;
@@ -456,7 +448,6 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
         if (pastPortalGate) {
             [strongSelf hideLaunchSplashWaitingIndicatorInWindow:window];
         }
-        [strongSelf startDeferredSDKsFromAppDelegate];
         [strongSelf applyLaunchDecision:decision toWindow:window];
     }];
 }
@@ -590,24 +581,13 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
 
 - (void)completeWebEntryFromViewController:(UIViewController *)viewController
                                 completion:(void (^)(BOOL, NSError *))completion {
-    AppDelegate *appDelegate = (AppDelegate *)UIApplication.sharedApplication.delegate;
-    if (![appDelegate isKindOfClass:AppDelegate.class]) {
-        if (completion) {
-            completion(NO, [NSError errorWithDomain:@"HangoStartup"
-                                                 code:2
-                                             userInfo:@{NSLocalizedDescriptionKey: @"Entry failed. Please try again."}]);
-        }
-        return;
-    }
+    NSDictionary *params = [HangoLaunchEnvironmentHelper loginRequestPayload];
+    HangoStartupLog(@"auth request submitted");
 
-    [appDelegate resolveAdjustAdidWithCompletion:^(NSString *adjustAdid) {
-        NSDictionary *params = [HangoLaunchEnvironmentHelper loginRequestPayloadWithAdjustAdid:adjustAdid];
-        HangoStartupLog(@"auth request submitted");
-
-        [[HangoRequestManager shared] submitAuthWithParameters:params
-                                                        inView:viewController.view
-                                                      showsHUD:YES
-                                                    completion:^(NSDictionary *response, NSError *error) {
+    [[HangoRequestManager shared] submitAuthWithParameters:params
+                                                    inView:viewController.view
+                                                  showsHUD:YES
+                                                completion:^(NSDictionary *response, NSError *error) {
         if (error) {
             if (completion) {
                 completion(NO, error);
@@ -638,7 +618,6 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
         if (completion) {
             completion(YES, nil);
         }
-    }];
     }];
 }
 
