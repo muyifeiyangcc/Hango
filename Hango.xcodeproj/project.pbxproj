@@ -142,9 +142,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Hango/Hango.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 4;
-				DEVELOPMENT_TEAM = 6NUFR97X3A;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hango/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires camera access to capture profile avatars, upload photos for sharing and support video calls. We will only access and use captured images with your explicit permission.";
@@ -167,7 +167,7 @@
 					"-framework",
 					CoreTelephony,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.myfy.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hango.hty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -187,9 +187,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Hango/Hango.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 4;
-				DEVELOPMENT_TEAM = 6NUFR97X3A;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hango/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires camera access to capture profile avatars, upload photos for sharing and support video calls. We will only access and use captured images with your explicit permission.";
@@ -212,7 +212,7 @@
 					"-framework",
 					CoreTelephony,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.myfy.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hango.hty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
