@@ -11,28 +11,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>itms-apps</string>
-		<string>squarecash</string>
-		<string>cashme</string>
-		<string>upi</string>
-		<string>phonepe</string>
-		<string>paytmmp</string>
-		<string>gpay</string>
-		<string>com.amazon.mobile.shopping</string>
-		<string>mobikwik</string>
-		<string>freecharge</string>
-		<string>whatsapp</string>
-		<string>instagram</string>
-		<string>fb</string>
-		<string>tiktok</string>
-		<string>comgooglemaps</string>
-		<string>tweetie</string>
-		<string>wechat</string>
-		<string>alipay</string>
-		<string>mqq</string>
-	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

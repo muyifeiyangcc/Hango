@@ -2,7 +2,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface HangoFluxHostViewController : UIViewController
+@interface HangoFeaturedPageViewController : UIViewController
 @end
 
 NS_ASSUME_NONNULL_END

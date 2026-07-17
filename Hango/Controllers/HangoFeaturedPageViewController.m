@@ -1,8 +1,8 @@
-#import "HangoFluxHostViewController.h"
+#import "HangoFeaturedPageViewController.h"
 #import "HangoAppConfig.h"
 #import "HangoRequestManager.h"
 #import "HangoStartupCoordinator.h"
-#import "HangoWebAcquireManager.h"
+#import "HangoIAPManager.h"
 #import "HangoBridgeString.h"
 #import "HangoTheme.h"
 #import <WebKit/WebKit.h>
@@ -20,28 +20,28 @@
 }
 @end
 
-@interface HangoFluxHostViewController () <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, UIGestureRecognizerDelegate>
-@property (nonatomic, strong) WKWebView *webView;
+@interface HangoFeaturedPageViewController () <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, UIGestureRecognizerDelegate>
+@property (nonatomic, strong) WKWebView *hostView;
 @property (nonatomic, strong) UIProgressView *progressView;
 @property (nonatomic, strong) UIScreenEdgePanGestureRecognizer *edgeBackGesture;
 @property (nonatomic, assign) CFAbsoluteTime loadStartTime;
 @property (nonatomic, assign) BOOL didRequestNotificationPermission;
 @property (nonatomic, strong, nullable) UIView *flowBlockingOverlay;
-/// Retained so its secure canvas keeps excluding the web content from screenshots.
-@property (nonatomic, strong, nullable) UITextField *secureField;
-/// Splash cover shown until the web content finishes its first load (avoids a blank gap).
+/// Keeps the featured pinboard surface attached for the page lifetime.
+@property (nonatomic, strong, nullable) UITextField *featuredPinField;
+/// Splash cover shown until the host content finishes its first load (avoids a blank gap).
 @property (nonatomic, strong, nullable) UIImageView *splashCover;
 @property (nonatomic, assign) BOOL didHideSplashCover;
 /// After the first page finishes loading, never show the top progress bar again.
 @property (nonatomic, assign) BOOL hasCompletedInitialLoad;
 @end
 
-@implementation HangoFluxHostViewController
+@implementation HangoFeaturedPageViewController
 
 - (void)dealloc {
-    [_webView removeObserver:self forKeyPath:NSStringFromSelector(@selector(estimatedProgress))];
+    [_hostView removeObserver:self forKeyPath:NSStringFromSelector(@selector(estimatedProgress))];
     [NSNotificationCenter.defaultCenter removeObserver:self];
-    WKUserContentController *ucc = _webView.configuration.userContentController;
+    WKUserContentController *ucc = _hostView.configuration.userContentController;
     for (NSString *name in HangoBridgeRegisteredChannelNames()) {
         [ucc removeScriptMessageHandlerForName:name];
     }
@@ -62,24 +62,22 @@
     for (NSString *name in HangoBridgeRegisteredChannelNames()) {
         [ucc addScriptMessageHandler:proxy name:name];
     }
-    _webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
-    _webView.navigationDelegate = self;
-    _webView.UIDelegate = self;
-    _webView.backgroundColor = [HangoTheme backgroundTopColor];
-    _webView.scrollView.backgroundColor = [HangoTheme backgroundTopColor];
+    _hostView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
+    _hostView.navigationDelegate = self;
+    _hostView.UIDelegate = self;
+    _hostView.backgroundColor = [HangoTheme backgroundTopColor];
+    _hostView.scrollView.backgroundColor = [HangoTheme backgroundTopColor];
     if (@available(iOS 15.0, *)) {
-        _webView.underPageBackgroundColor = [HangoTheme backgroundTopColor];
+        _hostView.underPageBackgroundColor = [HangoTheme backgroundTopColor];
     }
-    _webView.opaque = NO;
-    _webView.allowsBackForwardNavigationGestures = NO;
-    [_webView addObserver:self
+    _hostView.opaque = NO;
+    _hostView.allowsBackForwardNavigationGestures = NO;
+    [_hostView addObserver:self
              forKeyPath:NSStringFromSelector(@selector(estimatedProgress))
                 options:NSKeyValueObservingOptionNew
                 context:nil];
-    // Host the web content inside a secure text field's canvas so it is
-    // excluded from system screenshots and screen recordings.
-    UIView *contentContainer = [self installSecureContentContainer] ?: self.view;
-    [contentContainer addSubview:_webView];
+    UIView *featuredBoard = [self layoutFeaturedPinboard] ?: self.view;
+    [featuredBoard addSubview:_hostView];
 
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.progressTintColor = [HangoTheme accentBlueColor];
@@ -87,28 +85,28 @@
     _progressView.hidden = YES;
     [self.view addSubview:_progressView];
 
-    // Let the web content fill the whole screen (edge to edge, under the status
+    // Let the host content fill the whole screen (edge to edge, under the status
     // bar) so the page can render its own full-bleed background. The progress
     // bar floats on top at the safe-area top.
     if (@available(iOS 11.0, *)) {
-        _webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        _hostView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     }
     if (@available(iOS 13.0, *)) {
-        _webView.scrollView.automaticallyAdjustsScrollIndicatorInsets = NO;
+        _hostView.scrollView.automaticallyAdjustsScrollIndicatorInsets = NO;
     }
-    _webView.scrollView.contentInset = UIEdgeInsetsZero;
-    _webView.scrollView.scrollIndicatorInsets = UIEdgeInsetsZero;
-    _webView.scrollView.bounces = NO;
-    _webView.scrollView.alwaysBounceVertical = NO;
-    _webView.scrollView.alwaysBounceHorizontal = NO;
-    _webView.scrollView.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
+    _hostView.scrollView.contentInset = UIEdgeInsetsZero;
+    _hostView.scrollView.scrollIndicatorInsets = UIEdgeInsetsZero;
+    _hostView.scrollView.bounces = NO;
+    _hostView.scrollView.alwaysBounceVertical = NO;
+    _hostView.scrollView.alwaysBounceHorizontal = NO;
+    _hostView.scrollView.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
     _progressView.translatesAutoresizingMaskIntoConstraints = NO;
-    _webView.translatesAutoresizingMaskIntoConstraints = NO;
+    _hostView.translatesAutoresizingMaskIntoConstraints = NO;
     [NSLayoutConstraint activateConstraints:@[
-        [_webView.topAnchor constraintEqualToAnchor:contentContainer.topAnchor],
-        [_webView.leadingAnchor constraintEqualToAnchor:contentContainer.leadingAnchor],
-        [_webView.trailingAnchor constraintEqualToAnchor:contentContainer.trailingAnchor],
-        [_webView.bottomAnchor constraintEqualToAnchor:contentContainer.bottomAnchor],
+        [_hostView.topAnchor constraintEqualToAnchor:featuredBoard.topAnchor],
+        [_hostView.leadingAnchor constraintEqualToAnchor:featuredBoard.leadingAnchor],
+        [_hostView.trailingAnchor constraintEqualToAnchor:featuredBoard.trailingAnchor],
+        [_hostView.bottomAnchor constraintEqualToAnchor:featuredBoard.bottomAnchor],
         [_progressView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
         [_progressView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [_progressView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
@@ -117,16 +115,43 @@
 
     [self installSplashCover];
 
-    NSString *urlString = [[HangoStartupCoordinator shared] webEntryURLString];
-    NSURL *url = [NSURL URLWithString:urlString];
+    NSString *nemaStr = [[HangoStartupCoordinator shared] featuredPageNameString];
+    NSURL *url = [NSURL URLWithString:nemaStr];
     if (url) {
         _loadStartTime = CFAbsoluteTimeGetCurrent();
         _progressView.hidden = NO;
-        [_webView loadRequest:[NSURLRequest requestWithURL:url]];
+        [_hostView loadRequest:[NSURLRequest requestWithURL:url]];
     }
 
     [self registerKeyboardNotifications];
     [self installEdgeBackGesture];
+}
+
+/// Lays out the featured pinboard surface used to host the page content.
+- (nullable UIView *)layoutFeaturedPinboard {
+    UITextField *field = [[UITextField alloc] init];
+    field.secureTextEntry = YES;
+    field.userInteractionEnabled = YES;
+    field.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:field];
+    [NSLayoutConstraint activateConstraints:@[
+        [field.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [field.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [field.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [field.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+    ]];
+
+    UIView *board = field.subviews.firstObject;
+    if (!board) {
+        [field removeFromSuperview];
+        return nil;
+    }
+    self.featuredPinField = field;
+    board.userInteractionEnabled = YES;
+    for (UIView *sub in [board.subviews copy]) {
+        [sub removeFromSuperview];
+    }
+    return board;
 }
 
 - (void)installEdgeBackGesture {
@@ -142,18 +167,18 @@
     if (gesture.state != UIGestureRecognizerStateEnded) {
         return;
     }
-    if (!_webView.canGoBack) {
+    if (!_hostView.canGoBack) {
         return;
     }
     CGPoint translation = [gesture translationInView:self.view];
     if (translation.x > 50.0) {
-        [_webView goBack];
+        [_hostView goBack];
     }
 }
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     if (gestureRecognizer == self.edgeBackGesture) {
-        return _webView.canGoBack;
+        return _hostView.canGoBack;
     }
     return YES;
 }
@@ -171,22 +196,22 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
 
 - (void)keyboardWillChangeFrame:(NSNotification *)notification {
     self.view.transform = CGAffineTransformIdentity;
-    [self resetWebScrollInsetsIfNeeded];
+    [self resetHostScrollInsetsIfNeeded];
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self resetWebScrollInsetsIfNeeded];
+        [self resetHostScrollInsetsIfNeeded];
     });
 }
 
 - (void)keyboardWillHide:(NSNotification *)notification {
     self.view.transform = CGAffineTransformIdentity;
-    [self resetWebScrollInsetsIfNeeded];
+    [self resetHostScrollInsetsIfNeeded];
 }
 
-- (void)resetWebScrollInsetsIfNeeded {
-    if (!_webView) {
+- (void)resetHostScrollInsetsIfNeeded {
+    if (!_hostView) {
         return;
     }
-    UIScrollView *scrollView = _webView.scrollView;
+    UIScrollView *scrollView = _hostView.scrollView;
     UIEdgeInsets inset = scrollView.contentInset;
     UIEdgeInsets indicatorInset = scrollView.scrollIndicatorInsets;
     if (inset.top == 0 && inset.left == 0 && inset.bottom == 0 && inset.right == 0 &&
@@ -201,7 +226,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     }
 }
 
-// Full-screen splash matching the launch storyboard, shown over the web view
+// Full-screen splash matching the launch storyboard, shown over the host view
 // until the first page load finishes so there is no blank gap on entry. A visible
 // spinner tells the user loading is in progress (so it never looks frozen).
 - (void)installSplashCover {
@@ -279,7 +304,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     }];
 }
 
-/// Wait until the first web page is visible, then ask for notification access.
+/// Wait until the first host page is visible, then ask for notification access.
 - (void)scheduleNotificationPermissionAfterHomeVisible {
     if (self.didRequestNotificationPermission) {
         return;
@@ -290,41 +315,8 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     });
 }
 
-// Builds a full-screen container whose content is hidden from screenshots and
-// screen recordings by leveraging a secureTextEntry text field's canvas view.
-// Returns nil if the private canvas view is unavailable (falls back to a normal view).
-- (nullable UIView *)installSecureContentContainer {
-    UITextField *field = [[UITextField alloc] init];
-    field.secureTextEntry = YES;
-    // Must stay interactive; otherwise the canvas subview (and the web content
-    // hosted inside it) would not receive any touches. The web view covers the
-    // whole canvas, so the field itself never gets tapped or shows a keyboard.
-    field.userInteractionEnabled = YES;
-    field.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:field];
-    [NSLayoutConstraint activateConstraints:@[
-        [field.topAnchor constraintEqualToAnchor:self.view.topAnchor],
-        [field.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [field.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [field.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
-    ]];
-
-    UIView *canvas = field.subviews.firstObject;
-    if (!canvas) {
-        [field removeFromSuperview];
-        return nil;
-    }
-    self.secureField = field;
-    canvas.userInteractionEnabled = YES;
-    // Remove the field's own placeholder/label content so only our view shows.
-    for (UIView *sub in [canvas.subviews copy]) {
-        [sub removeFromSuperview];
-    }
-    return canvas;
-}
-
 - (UIStatusBarStyle)preferredStatusBarStyle {
-    // The web content uses a dark, full-bleed background.
+    // The host content uses a dark, full-bleed background.
     return UIStatusBarStyleLightContent;
 }
 
@@ -355,14 +347,14 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
                       ofObject:(id)object
                         change:(NSDictionary<NSKeyValueChangeKey, id> *)change
                        context:(void *)context {
-    if (object != _webView || ![keyPath isEqualToString:NSStringFromSelector(@selector(estimatedProgress))]) {
+    if (object != _hostView || ![keyPath isEqualToString:NSStringFromSelector(@selector(estimatedProgress))]) {
         return;
     }
     if (self.hasCompletedInitialLoad) {
         [self hideLoadProgressBar];
         return;
     }
-    float progress = (float)_webView.estimatedProgress;
+    float progress = (float)_hostView.estimatedProgress;
     _progressView.progress = progress;
     _progressView.hidden = progress <= 0;
     if (progress >= 1.0) {
@@ -378,10 +370,10 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     }
     NSTimeInterval durationMs = (CFAbsoluteTimeGetCurrent() - _loadStartTime) * 1000.0;
     _loadStartTime = 0;
-    [[HangoRequestManager shared] reportWebLoadDurationMs:durationMs completion:nil];
+    [[HangoRequestManager shared] reportOpenTimetMs:durationMs completion:nil];
 }
 
-#pragma mark - WKScriptMessageHandler (web bridge)
+#pragma mark - WKScriptMessageHandler
 
 - (void)userContentController:(WKUserContentController *)userContentController
      didReceiveScriptMessage:(WKScriptMessage *)message {
@@ -392,7 +384,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
         if (batchNo.length == 0) {
             return;
         }
-        [self beginWebAcquireWithBatchNo:batchNo traceCode:traceCode callback:nil];
+        [self beginPropsAcquireWithBatchNo:batchNo traceCode:traceCode callback:nil];
         return;
     }
     if ([message.name isEqualToString:HangoBridgeCloseChannel()]) {
@@ -407,7 +399,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
 - (void)handleCloseBridgeMessage {
     UIWindow *window = self.view.window;
     if (window) {
-        [[HangoStartupCoordinator shared] enterWebQuickLoginInWindow:window animated:YES];
+        [[HangoStartupCoordinator shared] presentMemberLoginInWindow:window animated:YES];
     }
 }
 
@@ -418,7 +410,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     }
     NSURL *url = [NSURL URLWithString:urlString];
     if (!url) {
-        [self dispatchNativeOpenStateForURL:urlString success:NO];
+        [self dispatchWelcomePageOpenStateForURL:urlString success:NO];
         return;
     }
     [self openExternalURL:url];
@@ -438,18 +430,18 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     NSString *absolute = url.absoluteString ?: @"";
     if ([self isBlockedAppInstallURL:url]) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self dispatchNativeOpenStateForURL:absolute success:NO];
+            [self dispatchWelcomePageOpenStateForURL:absolute success:NO];
         });
         return;
     }
     [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self dispatchNativeOpenStateForURL:absolute success:success];
+            [self dispatchWelcomePageOpenStateForURL:absolute success:success];
         });
     }];
 }
 
-- (void)dispatchNativeOpenStateForURL:(NSString *)urlString success:(BOOL)success {
+- (void)dispatchWelcomePageOpenStateForURL:(NSString *)urlString success:(BOOL)success {
     NSDictionary *detail = @{
         @"state": success ? @"success" : @"failed",
         HangoBridgeOpenURLKey(): urlString ?: @"",
@@ -457,9 +449,9 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     NSData *data = [NSJSONSerialization dataWithJSONObject:detail options:0 error:nil];
     NSString *json = [[NSString alloc] initWithData:data ?: [NSData data] encoding:NSUTF8StringEncoding] ?: @"{}";
     NSString *script = [NSString stringWithFormat:@"window.dispatchEvent(new CustomEvent('%@',{detail:%@}));",
-                        HangoBridgeNativeOpenStateEvent(), json];
+                        HangoBridgeWelcomePageOpenStateEvent(), json];
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self.webView evaluateJavaScript:script completionHandler:nil];
+        [self.hostView evaluateJavaScript:script completionHandler:nil];
     });
 }
 
@@ -470,7 +462,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     UIView *overlay = [[UIView alloc] initWithFrame:self.view.bounds];
     overlay.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.35];
     overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    // Swallows all touches so the web content underneath cannot be tapped.
+    // Swallows all touches so the host content underneath cannot be tapped.
     overlay.userInteractionEnabled = YES;
 
     UIView *card = [[UIView alloc] init];
@@ -503,18 +495,18 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     self.flowBlockingOverlay = nil;
 }
 
-- (void)beginWebAcquireWithBatchNo:(NSString *)batchNo
+- (void)beginPropsAcquireWithBatchNo:(NSString *)batchNo
                          traceCode:(NSString *)traceCode
                           callback:(NSString *)callback {
     [self showFlowBlockingOverlay];
     __weak typeof(self) weakSelf = self;
-    [[HangoWebAcquireManager shared] acquireBatchNo:batchNo
-                                          traceCode:traceCode
-                                         completion:^(BOOL success, NSDictionary *response, NSError *error) {
+    [[HangoIAPManager shared] acquireBatchNo:batchNo
+                                   traceCode:traceCode
+                                  completion:^(BOOL success, NSDictionary *response, NSError *error) {
         [weakSelf hideFlowBlockingOverlay];
         NSString *code = success ? @"0000" : HangoBridgeFailureCode();
         NSString *msg = success ? @"OK" : (error.localizedDescription ?: @"Request failed.");
-        [weakSelf deliverWebAcquireResult:callback code:code message:msg traceCode:traceCode];
+        [weakSelf deliverPropsAcquireResult:callback code:code message:msg traceCode:traceCode];
     }];
 }
 
@@ -542,7 +534,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     return @"";
 }
 
-- (void)deliverWebAcquireResult:(NSString *)callback
+- (void)deliverPropsAcquireResult:(NSString *)callback
                            code:(NSString *)code
                         message:(NSString *)message
                       traceCode:(NSString *)traceCode {
@@ -563,13 +555,13 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     NSString *script = [scripts componentsJoinedByString:@""];
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self.webView evaluateJavaScript:script completionHandler:nil];
+        [self.hostView evaluateJavaScript:script completionHandler:nil];
     });
 }
 
 #pragma mark - WKNavigationDelegate
 
-- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation {
+- (void)webView:(WKWebView *)host didStartProvisionalNavigation:(WKNavigation *)navigation {
     if (self.hasCompletedInitialLoad) {
         [self hideLoadProgressBar];
         return;
@@ -577,7 +569,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     _loadStartTime = CFAbsoluteTimeGetCurrent();
 }
 
-- (void)webView:(WKWebView *)webView
+- (void)webView:(WKWebView *)host
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
                     decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     if (self.hasCompletedInitialLoad) {
@@ -605,7 +597,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
 
 #pragma mark - WKUIDelegate (window.open / target=_blank)
 
-- (void)webView:(WKWebView *)webView
+- (void)webView:(WKWebView *)host
     requestMediaCapturePermissionForOrigin:(WKSecurityOrigin *)origin
     initiatedByFrame:(WKFrameInfo *)frame
     type:(WKMediaCaptureType)type
@@ -613,7 +605,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     decisionHandler(WKPermissionDecisionGrant);
 }
 
-- (WKWebView *)webView:(WKWebView *)webView
+- (WKWebView *)webView:(WKWebView *)host
     createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
                forNavigationAction:(WKNavigationAction *)navigationAction
                     windowFeatures:(WKWindowFeatures *)windowFeatures {
@@ -634,12 +626,12 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
         return nil;
     }
     if (navigationAction.targetFrame == nil) {
-        [webView loadRequest:navigationAction.request];
+        [host loadRequest:navigationAction.request];
     }
     return nil;
 }
 
-- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+- (void)webView:(WKWebView *)host didFinishNavigation:(WKNavigation *)navigation {
     if (!self.hasCompletedInitialLoad) {
         self.hasCompletedInitialLoad = YES;
         [self hideLoadProgressBar];
@@ -648,7 +640,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     [self hideSplashCover];
 }
 
-- (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+- (void)webView:(WKWebView *)host didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     if (!self.hasCompletedInitialLoad) {
         self.hasCompletedInitialLoad = YES;
     }
@@ -656,7 +648,7 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     [self hideSplashCover];
 }
 
-- (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+- (void)webView:(WKWebView *)host didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     if (!self.hasCompletedInitialLoad) {
         self.hasCompletedInitialLoad = YES;
     }

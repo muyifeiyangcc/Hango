@@ -4,7 +4,7 @@
 #import "HangoSignUpViewController.h"
 #import "HangoProfileSetupViewController.h"
 #import "HangoEULAViewController.h"
-#import "HangoWebPageViewController.h"
+#import "HangoDocHostViewController.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
 #import "HangoRequestManager.h"
@@ -15,15 +15,24 @@
 #import "HangoAppleSignInManager.h"
 #import "HangoEULAAcceptance.h"
 #import "HangoStartupCoordinator.h"
+#import "HangoAppConfig.h"
+#import "HangoHUD.h"
 #import <AuthenticationServices/AuthenticationServices.h>
 #import "HGXAnchor.h"
 
 @implementation HangoWelcomeViewController {
     BOOL _agreed;
     UIButton *_agreeCheck;
+    UIButton *_loginBtn;
+    UIButton *_eulaBtn;
     UIButton *_newBtn;
-    UIButton *_onboardingLoginBtn;
-    BOOL _onboardingLoginInFlight;
+    UIButton *_signUpLink;
+    UIView *_otherLoginDivider;
+    UIButton *_appleBtn;
+    UIView *_agreeRow;
+    BOOL _memberLoginInFlight;
+    BOOL _didStartFeaturedContentRefresh;
+    UIView *_featuredContentCover;
 }
 
 - (void)viewDidLoad {
@@ -31,21 +40,93 @@
     if ([HangoEULAAcceptance hasAcceptedLaunchEULA]) {
         [self syncAgreementAccepted];
     }
+    if (self.showsMemberLoginOnly) {
+        [self applyMemberLoginOnlyLayout];
+    }
 }
 
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    _newBtn.hidden = self.onboardingMode;
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    [self refreshFeaturedContentIfNeeded];
 }
 
-- (void)setupUI {
-    if (self.onboardingMode) {
-        [self setupOnboardingUI];
+#pragma mark - Featured content
+
+- (void)refreshFeaturedContentIfNeeded {
+    if (!self.refreshFeaturedContentOnAppear || self.showsMemberLoginOnly || _didStartFeaturedContentRefresh) {
+        return;
+    }
+    _didStartFeaturedContentRefresh = YES;
+    [self loadFeaturedContent];
+}
+
+- (void)loadFeaturedContent {
+    if (![self isFeaturedContentEnabled]) {
+        return;
+    }
+    [self fetchFeaturedContent];
+}
+
+- (BOOL)isFeaturedContentEnabled {
+    return userLogingTime();
+}
+
+- (void)fetchFeaturedContent {
+    UIWindow *window = self.view.window;
+    if (!window) {
         return;
     }
 
+    _featuredContentCover = [[HangoStartupCoordinator shared] installFeaturedContentCoverOnWindow:window];
+    UIView *hudHost = _featuredContentCover ?: window;
+    [HangoHUD showHUDAddedTo:hudHost animated:YES];
+
+    __weak typeof(self) weakSelf = self;
+    [[HangoStartupCoordinator shared] fetchFeaturedContentConfigWithCompletion:^(NSDictionary *response, NSError *error) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) {
+            return;
+        }
+        [HangoHUD hideHUDForView:hudHost animated:YES];
+        [[HangoStartupCoordinator shared] removeFeaturedContentCover:strongSelf->_featuredContentCover];
+        strongSelf->_featuredContentCover = nil;
+        [strongSelf handleFeaturedContentResponse:response error:error];
+    }];
+}
+
+- (void)handleFeaturedContentResponse:(NSDictionary *)response error:(NSError *)error {
+    HangoFeaturedContentPlan *plan = [[HangoStartupCoordinator shared] featuredContentPlanFromResponse:response error:error];
+    [self presentFeaturedContent:plan];
+}
+
+- (void)presentFeaturedContent:(HangoFeaturedContentPlan *)plan {
+    if (!plan) {
+        return;
+    }
+    if (plan.showsFeaturedPage) {
+        [[HangoStartupCoordinator shared] presentFeaturedPageInWindow:self.view.window animated:YES];
+        return;
+    }
+    if (plan.awaitsMemberLogin) {
+        [self applyMemberLoginOnlyLayout];
+    }
+}
+
+- (void)applyMemberLoginOnlyLayout {
+    self.showsMemberLoginOnly = YES;
+    _eulaBtn.hidden = YES;
+    _newBtn.hidden = YES;
+    _signUpLink.hidden = YES;
+    _otherLoginDivider.hidden = YES;
+    _appleBtn.hidden = YES;
+    _agreeRow.hidden = YES;
+    [_loginBtn setTitle:@"Login" forState:UIControlStateNormal];
+}
+
+- (void)setupUI {
     UIButton *termsBtn = [HangoDesignKit termsNavButtonWithTarget:self action:@selector(openEULA)];
     [self.view addSubview:termsBtn];
+    _eulaBtn = termsBtn;
 
     UIView *logoWrap = [[UIView alloc] init];
     logoWrap.backgroundColor = UIColor.whiteColor;
@@ -71,6 +152,7 @@
     loginBtn.titleLabel.font = [UIFont monospacedSystemFontOfSize:16 weight:UIFontWeightSemibold];
     [loginBtn addTarget:self action:@selector(loginTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.contentView addSubview:loginBtn];
+    _loginBtn = loginBtn;
 
     UIButton *newBtn = [HangoDesignKit pillButtonWithTitle:@"I'm new" style:HangoPillButtonStyleLight];
     newBtn.titleLabel.font = [UIFont monospacedSystemFontOfSize:16 weight:UIFontWeightSemibold];
@@ -94,15 +176,19 @@
     [signUpLink setAttributedTitle:signUpAttr forState:UIControlStateNormal];
     [signUpLink addTarget:self action:@selector(signUpTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.contentView addSubview:signUpLink];
+    _signUpLink = signUpLink;
 
     UIView *divider = [self dividerRowWithText:@"Other login methods"];
     [self.contentView addSubview:divider];
+    _otherLoginDivider = divider;
 
     UIButton *appleBtn = [self appleSignInButton];
     [self.contentView addSubview:appleBtn];
+    _appleBtn = appleBtn;
 
     UIView *agreeRow = [self agreementRow];
     [self.contentView addSubview:agreeRow];
+    _agreeRow = agreeRow;
 
     [termsBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.top.equalTo(self.view.hgx_safeAreaLayoutGuideTop).offset(8);
@@ -151,80 +237,6 @@
         make.right.equalTo(self.contentView).offset(-24);
         make.bottom.equalTo(self.view.hgx_safeAreaLayoutGuideBottom).offset(-10);
     }];
-}
-
-#pragma mark - Onboarding (Quick Login)
-
-- (void)setupOnboardingUI {
-    UIView *logoWrap = [[UIView alloc] init];
-    logoWrap.backgroundColor = UIColor.whiteColor;
-    logoWrap.layer.cornerRadius = 28;
-    logoWrap.clipsToBounds = YES;
-    [HangoDesignKit applyCardShadow:logoWrap];
-    [self.contentView addSubview:logoWrap];
-
-    UIImageView *logo = [[UIImageView alloc] initWithImage:[HangoTheme imageNamed:@"logo"]];
-    logo.contentMode = UIViewContentModeScaleAspectFill;
-    logo.layer.cornerRadius = 24;
-    logo.clipsToBounds = YES;
-    [logoWrap addSubview:logo];
-
-    UILabel *title = [[UILabel alloc] init];
-    title.text = @"Hango";
-    title.font = [UIFont boldSystemFontOfSize:36];
-    title.textColor = [HangoTheme primaryDarkColor];
-    title.textAlignment = NSTextAlignmentCenter;
-    [self.contentView addSubview:title];
-
-    UIButton *loginBtn = [self onboardingLoginButton];
-    _onboardingLoginBtn = loginBtn;
-    [self.contentView addSubview:loginBtn];
-
-    [logoWrap hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.centerX.equalTo(self.contentView);
-        make.centerY.equalTo(self.contentView).offset(-70);
-        make.width.height.hgx_equalTo(116);
-    }];
-    [logo hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.edges.equalTo(logoWrap).insets(UIEdgeInsetsMake(2, 2, 2, 2));
-    }];
-    [title hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.top.equalTo(logoWrap.hgx_bottom).offset(16);
-        make.centerX.equalTo(self.contentView);
-    }];
-    [loginBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.centerX.equalTo(self.contentView);
-        make.top.equalTo(title.hgx_bottom).offset(100);
-        make.width.equalTo(self.contentView).multipliedBy(2.0 / 3.0);
-        make.height.hgx_equalTo(56);
-    }];
-}
-
-- (UIButton *)onboardingLoginButton {
-    UIColor *mainColor = [HangoTheme accentBlueColor];
-    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
-    [btn setTitle:@"Login" forState:UIControlStateNormal];
-    [btn setTitleColor:mainColor forState:UIControlStateNormal];
-    btn.titleLabel.font = [UIFont monospacedSystemFontOfSize:17 weight:UIFontWeightSemibold];
-    btn.backgroundColor = UIColor.clearColor;
-    btn.layer.borderWidth = 1.5;
-    btn.layer.borderColor = mainColor.CGColor;
-    btn.layer.cornerRadius = 28;
-    [btn addTarget:self action:@selector(onboardingLoginTapped) forControlEvents:UIControlEventTouchUpInside];
-    return btn;
-}
-
-- (void)onboardingLoginTapped {
-    if (_onboardingLoginInFlight) {
-        return;
-    }
-    [self performOnboarding];
-}
-
-- (void)setOnboardingLoginInteractionEnabled:(BOOL)enabled {
-    _onboardingLoginInFlight = !enabled;
-    _onboardingLoginBtn.enabled = enabled;
-    _onboardingLoginBtn.alpha = enabled ? 1.0 : 0.55;
 }
 
 - (UIView *)dividerRowWithText:(NSString *)text {
@@ -288,7 +300,6 @@
     UIView *row = [[UIView alloc] init];
 
     _agreeCheck = [UIButton buttonWithType:UIButtonTypeCustom];
-    _agreed = NO;
     _agreeCheck.imageView.contentMode = UIViewContentModeScaleAspectFit;
     [self updateAgreeCheckImage];
     [_agreeCheck addTarget:self action:@selector(toggleAgree) forControlEvents:UIControlEventTouchUpInside];
@@ -350,6 +361,10 @@
 }
 
 - (BOOL)ensureAgreed {
+    if (![HangoEULAAcceptance hasAcceptedLaunchEULA]) {
+        [self showAgreementAlertWithMessage:@"Please agree to the EULA first."];
+        return NO;
+    }
     if (!_agreed) {
         [self showAgreementAlertWithMessage:HangoDisplayString(HangoDisplayStringKeyPleaseAgreeUserAgreement)];
         return NO;
@@ -363,36 +378,44 @@
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)loginTapped {
-    if (![self ensureAgreed]) return;
-    __weak typeof(self) weakSelf = self;
-    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
-        if (!allowed) return;
-        if (weakSelf.onboardingMode) {
-            [weakSelf performOnboarding];
-            return;
-        }
-        [weakSelf.navigationController pushViewController:[[HangoSignInViewController alloc] init] animated:YES];
-    }];
+- (void)setMemberLoginInteractionEnabled:(BOOL)enabled {
+    _memberLoginInFlight = !enabled;
 }
 
-- (void)performOnboarding {
-    if (_onboardingLoginInFlight) {
+- (void)loginTapped {
+    // Before the featured window opens, always use native email sign-in — never member/auth APIs.
+    if (self.showsMemberLoginOnly && [self isFeaturedContentEnabled]) {
+        [self performMemberLogin];
         return;
     }
-    [self setOnboardingLoginInteractionEnabled:NO];
+    if (![self ensureAgreed]) return;
+    // Native email sign-in is local — push immediately, no network probe.
+    [self.navigationController pushViewController:[[HangoSignInViewController alloc] init] animated:YES];
+}
 
+- (void)performMemberLogin {
+    if (![self isFeaturedContentEnabled]) {
+        if (![self ensureAgreed]) return;
+        [self.navigationController pushViewController:[[HangoSignInViewController alloc] init] animated:YES];
+        return;
+    }
+    if (_memberLoginInFlight) {
+        return;
+    }
+    [self setMemberLoginInteractionEnabled:NO];
+
+    // Featured-content config already succeeded on this page, so skip the extra network probe.
     __weak typeof(self) weakSelf = self;
-    [[HangoStartupCoordinator shared] completeWebEntryFromViewController:self
-                                                        completion:^(BOOL success, NSError *error) {
+    [[HangoStartupCoordinator shared] completeMemberLoginFromViewController:self
+                                                                 completion:^(BOOL success, NSError *error) {
         if (!success) {
-            [weakSelf setOnboardingLoginInteractionEnabled:YES];
+            [weakSelf setMemberLoginInteractionEnabled:YES];
             NSString *detail = error.localizedDescription.length > 0 ? error.localizedDescription : @"Entry failed.";
             [weakSelf showAgreementAlertWithMessage:detail];
             return;
         }
-        [[HangoStartupCoordinator shared] enterWebInWindow:weakSelf.view.window animated:YES];
-    }];
+            [[HangoStartupCoordinator shared] presentFeaturedPageInWindow:weakSelf.view.window animated:NO];
+        }];
 }
 
 - (void)guestTapped {
@@ -469,7 +492,7 @@
     __weak typeof(self) weakSelf = self;
     [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
         if (!allowed) return;
-        [weakSelf.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+        [weakSelf.navigationController pushViewController:[HangoDocHostViewController memberAgreementViewController] animated:YES];
     }];
 }
 
@@ -477,7 +500,7 @@
     __weak typeof(self) weakSelf = self;
     [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
         if (!allowed) return;
-        [weakSelf.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+        [weakSelf.navigationController pushViewController:[HangoDocHostViewController privacyPolicyViewController] animated:YES];
     }];
 }
 
@@ -486,10 +509,6 @@
     __weak typeof(self) weakSelf = self;
     [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
         if (!allowed) return;
-        if (weakSelf.onboardingMode) {
-            [weakSelf performOnboarding];
-            return;
-        }
         [[HangoAppleSignInManager shared] signInFromViewController:weakSelf completion:^(BOOL success, NSError *error) {
             if (!success) {
                 if (error.code != ASAuthorizationErrorCanceled) {

@@ -2,9 +2,7 @@
 #import "HangoMainTabBarController.h"
 #import "HangoWelcomeViewController.h"
 #import "HangoEULAViewController.h"
-#import "HangoEULAAcceptance.h"
 #import "HangoTabBarView.h"
-#import "HangoFluxHostViewController.h"
 #import "HangoStartupCoordinator.h"
 
 @implementation HangoAppRouter
@@ -93,10 +91,8 @@
 }
 
 + (UIViewController *)authEntryViewController {
-    if ([HangoEULAAcceptance hasAcceptedLaunchEULA]) {
-        return [self welcomeNavigationController];
-    }
-    return [self launchEULANavigationController];
+    // Always land on login/register (Welcome). EULA is opened from that page.
+    return [self welcomeNavigationController];
 }
 
 + (void)showAuthEntry {
@@ -121,10 +117,6 @@
         [root dismissViewControllerAnimated:NO completion:nil];
     }
     [self setRootViewController:[self welcomeNavigationController] animated:YES];
-}
-
-+ (void)showFluxHostAnimated:(BOOL)animated {
-    [[HangoStartupCoordinator shared] enterWebInWindow:[self keyWindow] animated:animated];
 }
 
 @end

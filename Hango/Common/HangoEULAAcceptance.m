@@ -13,4 +13,9 @@ static NSString * const kHangoLaunchEULAAcceptedKey = @"HangoLaunchEULAAccepted"
     [NSUserDefaults.standardUserDefaults synchronize];
 }
 
++ (void)clearLaunchEULAAccepted {
+    [NSUserDefaults.standardUserDefaults removeObjectForKey:kHangoLaunchEULAAcceptedKey];
+    [NSUserDefaults.standardUserDefaults synchronize];
+}
+
 @end

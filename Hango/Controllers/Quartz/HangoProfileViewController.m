@@ -9,7 +9,7 @@
 #import "HangoAppRouter.h"
 #import "HangovalueViewController.h"
 #import "HangoHostedPartiesViewController.h"
-#import "HangoWebPageViewController.h"
+#import "HangoDocHostViewController.h"
 #import "HangoDenyListViewController.h"
 #import "HangoProfileSetupViewController.h"
 #import "HangoDeleteAccountViewController.h"
@@ -231,11 +231,11 @@
 }
 
 - (void)openPrivacyPolicy {
-    [self.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+    [self.navigationController pushViewController:[HangoDocHostViewController privacyPolicyViewController] animated:YES];
 }
 
 - (void)openUserAgreement {
-    [self.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+    [self.navigationController pushViewController:[HangoDocHostViewController memberAgreementViewController] animated:YES];
 }
 
 - (void)openDenyList {

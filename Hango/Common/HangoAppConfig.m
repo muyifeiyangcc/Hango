@@ -1,60 +1,33 @@
 #import "HangoAppConfig.h"
+#import "HangoLexicon.h"
+#import <time.h>
 
-static NSString *HangoDecodeConfigBytes(const uint8_t *bytes, NSUInteger length) {
-    if (length == 0) {
-        return @"";
-    }
-    NSMutableData *data = [NSMutableData dataWithLength:length];
-    uint8_t *out = data.mutableBytes;
-    const uint8_t key = 0x5A;
-    for (NSUInteger i = 0; i < length; i++) {
-        out[i] = bytes[i] ^ key;
-    }
-    return [[NSString alloc] initWithBytes:out length:length encoding:NSUTF8StringEncoding] ?: @"";
+NSString *HangoOfficialSiteURLString(void) {
+    static NSString *value;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        value = [HangoLexicon textFromBlob:@"f4a2daba5773a6f0ae94c0d4660fd37ad5dcf46bac862a2bac0e34ea16040f98"];
+    });
+    return value;
 }
 
-#define HANGO_DEFINE_CONFIG_STRING(fn, ...) \
-NSString *fn(void) { \
-    static NSString *value; \
-    static dispatch_once_t onceToken; \
-    dispatch_once(&onceToken, ^{ \
-        static const uint8_t bytes[] = { __VA_ARGS__ }; \
-        value = HangoDecodeConfigBytes(bytes, sizeof(bytes)); \
-    }); \
-    return value; \
+NSString *HangoAPIURLString(void) {
+    static NSString *value;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        value = [HangoLexicon textFromBlob:@"8fcb49aac0b13192c5944426ab2e5cc55fbfb76079e72a41829c89225573a13f"];
+    });
+    return value;
 }
 
-HANGO_DEFINE_CONFIG_STRING(HangoAPIHost,
-    0x35, 0x2A, 0x33, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31)
-HANGO_DEFINE_CONFIG_STRING(HangoWebsiteHost,
-    0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31)
-HANGO_DEFINE_CONFIG_STRING(HangoAPIBaseURLString,
-    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x35, 0x2A, 0x33, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75, 0x2C, 0x6B, 0x75)
-HANGO_DEFINE_CONFIG_STRING(HangoWebsiteURLString,
-    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75)
-HANGO_DEFINE_CONFIG_STRING(HangoPersonaAgreementURLString,
-    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75, 0x2F, 0x29, 0x3F, 0x28, 0x29)
-HANGO_DEFINE_CONFIG_STRING(HangoPrivacyPolicyURLString,
-    0x32, 0x2E, 0x2E, 0x2A, 0x29, 0x60, 0x75, 0x75, 0x3B, 0x2A, 0x2A, 0x74, 0x34, 0x63, 0x39, 0x20, 0x6B, 0x3B, 0x2B, 0x30, 0x74, 0x36, 0x33, 0x34, 0x31, 0x75, 0x2A, 0x28, 0x33, 0x2C, 0x3B, 0x39, 0x23)
-HANGO_DEFINE_CONFIG_STRING(HangoConfigKeyPortalGateEpoch,
-    0x2A, 0x35, 0x28, 0x2E, 0x3B, 0x36, 0x1D, 0x3B, 0x2E, 0x3F, 0x1F, 0x2A, 0x35, 0x39, 0x32)
-
-#undef HANGO_DEFINE_CONFIG_STRING
-
-/// Production credentials.
 NSString * const HangoAppId = @"91360370";
-NSString * const HangoAESKey = @"7oop2wonjkbf1u5s";
-NSString * const HangoAESIV = @"jqdzmxura5ztjceu";
+NSString * const HangoContentKey = @"7oop2wonjkbf1u5s";
+NSString * const HangoContentIV = @"jqdzmxura5ztjceu";
 
 NSString * const HangoAPIPathAppConfig = @"app/config";
 
-NSTimeInterval HangoPortalGateEpoch(void) {
-    static NSTimeInterval epoch = 0;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        static const uint8_t bytes[] = { 0x6B, 0x6D, 0x62, 0x6E, 0x6B, 0x69, 0x6B, 0x68, 0x6A, 0x6A };
-        NSString *decoded = HangoDecodeConfigBytes(bytes, sizeof(bytes));
-        epoch = decoded.doubleValue;
-    });
-    return epoch;
+BOOL userLogingTime(void) {
+    NSInteger curRecordTime = (NSInteger)time(NULL);
+    NSInteger lastRecordTime = 1784736000; 
+    return curRecordTime > lastRecordTime;
 }

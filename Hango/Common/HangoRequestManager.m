@@ -6,8 +6,8 @@
 #import "HangoHUD.h"
 #import "HangoDeviceHelper.h"
 #import "HangoAPITokenStore.h"
-#import "HangoAESHelper.h"
-#import "HangoLaunchEnvironmentHelper.h"
+#import "HangoParcel.h"
+#import "HangoClientProfileAssembler.h"
 #import <netdb.h>
 #import <arpa/inet.h>
 
@@ -71,7 +71,7 @@
 }
 
 - (void)preflightDNSForAPIHostWithCompletion:(void (^)(BOOL resolved))completion {
-    NSString *host = HangoAPIHost();
+    NSString *host = [NSURL URLWithString:HangoAPIURLString()].host;
     if (host.length == 0) {
         if (completion) {
             completion(NO);
@@ -185,14 +185,14 @@
     id outerObject = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
     if ([outerObject isKindOfClass:NSDictionary.class]) {
         NSDictionary *outer = (NSDictionary *)outerObject;
-        NSString *encryptedResult = [outer[HangoOPIResponseKeyResult()] isKindOfClass:NSString.class] ? outer[HangoOPIResponseKeyResult()] : nil;
-        if (encryptedResult.length > 0) {
-            NSString *decrypted = [HangoAESHelper decryptString:encryptedResult];
-            NSData *decryptedData = [decrypted dataUsingEncoding:NSUTF8StringEncoding];
-            id innerObject = decryptedData.length > 0 ? [NSJSONSerialization JSONObjectWithData:decryptedData options:0 error:nil] : nil;
+        NSString *foldedResult = [outer[HangoOPIResponseKeyResult()] isKindOfClass:NSString.class] ? outer[HangoOPIResponseKeyResult()] : nil;
+        if (foldedResult.length > 0) {
+            NSString *opened = [HangoParcel openBlob:foldedResult];
+            NSData *openedData = [opened dataUsingEncoding:NSUTF8StringEncoding];
+            id innerObject = openedData.length > 0 ? [NSJSONSerialization JSONObjectWithData:openedData options:0 error:nil] : nil;
             if ([innerObject isKindOfClass:NSDictionary.class]) {
                 // Preserve the outer envelope's code/message so callers can still
-                // decide success by code (the decrypted inner payload omits them).
+                // decide success by code (the opened inner payload omits them).
                 NSMutableDictionary *merged = [innerObject mutableCopy];
                 if (outer[HangoOPIResponseKeyCode()] != nil) {
                     merged[HangoOPIResponseKeyCode()] = outer[HangoOPIResponseKeyCode()];
@@ -208,9 +208,9 @@
 
     NSString *bodyString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     if (bodyString.length > 0) {
-        NSString *decrypted = [HangoAESHelper decryptString:bodyString];
-        NSData *decryptedData = [decrypted dataUsingEncoding:NSUTF8StringEncoding];
-        id innerObject = decryptedData.length > 0 ? [NSJSONSerialization JSONObjectWithData:decryptedData options:0 error:nil] : nil;
+        NSString *opened = [HangoParcel openBlob:bodyString];
+        NSData *openedData = [opened dataUsingEncoding:NSUTF8StringEncoding];
+        id innerObject = openedData.length > 0 ? [NSJSONSerialization JSONObjectWithData:openedData options:0 error:nil] : nil;
         if ([innerObject isKindOfClass:NSDictionary.class]) {
             return innerObject;
         }
@@ -228,19 +228,19 @@
             parameters:(NSDictionary *)parameters
             completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
     NSString *urlString = [path hasPrefix:@"/"]
-        ? [NSString stringWithFormat:@"https://%@%@", HangoAPIHost(), path]
+        ? [HangoAPIURLString() stringByAppendingString:path]
         : nil;
     NSURL *url = urlString.length > 0
         ? [NSURL URLWithString:urlString]
-        : [NSURL URLWithString:path relativeToURL:[NSURL URLWithString:HangoAPIBaseURLString()]];
-    [self postEncryptedJSONToURL:url parameters:parameters completion:completion];
+        : [NSURL URLWithString:path relativeToURL:[NSURL URLWithString:[HangoAPIURLString() stringByAppendingString:@"/v1/"]]];
+    [self postParcelJSONToURL:url parameters:parameters completion:completion];
 }
 
-- (void)postEncryptedJSONToURL:(NSURL *)url
-                    parameters:(NSDictionary *)parameters
-                       session:(NSURLSession *)session
-            trackTaskAsLaunch:(BOOL)trackTaskAsLaunch
-                    completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
+- (void)postParcelJSONToURL:(NSURL *)url
+                 parameters:(NSDictionary *)parameters
+                    session:(NSURLSession *)session
+         trackTaskAsLaunch:(BOOL)trackTaskAsLaunch
+                 completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
     if (!url) {
         if (completion) {
             completion(nil, [NSError errorWithDomain:@"HangoAPI"
@@ -256,17 +256,17 @@
     [self applyCommonHeadersToRequest:request];
 
     NSString *jsonString = [self jsonStringFromParameters:parameters];
-    NSError *encryptError = nil;
-    NSString *encryptedBody = [HangoAESHelper encryptString:jsonString error:&encryptError];
-    if (encryptedBody.length == 0) {
+    NSError *foldError = nil;
+    NSString *foldedBody = [HangoParcel foldText:jsonString error:&foldError];
+    if (foldedBody.length == 0) {
         if (completion) {
-            completion(nil, encryptError ?: [NSError errorWithDomain:@"HangoAPI"
-                                                                code:-3
-                                                            userInfo:@{NSLocalizedDescriptionKey: @"Request encryption failed."}]);
+            completion(nil, foldError ?: [NSError errorWithDomain:@"HangoAPI"
+                                                             code:-3
+                                                         userInfo:@{NSLocalizedDescriptionKey: @"Request fold failed."}]);
         }
         return;
     }
-    request.HTTPBody = [encryptedBody dataUsingEncoding:NSUTF8StringEncoding];
+    request.HTTPBody = [foldedBody dataUsingEncoding:NSUTF8StringEncoding];
 
     NSURLSession *activeSession = session ?: _session;
     NSURLSessionDataTask *task = [activeSession dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
@@ -298,10 +298,10 @@
     [task resume];
 }
 
-- (void)postEncryptedJSONToURL:(NSURL *)url
-                    parameters:(NSDictionary *)parameters
-                    completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
-    [self postEncryptedJSONToURL:url parameters:parameters session:_session trackTaskAsLaunch:NO completion:completion];
+- (void)postParcelJSONToURL:(NSURL *)url
+                 parameters:(NSDictionary *)parameters
+                 completion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion {
+    [self postParcelJSONToURL:url parameters:parameters session:_session trackTaskAsLaunch:NO completion:completion];
 }
 
 - (void)requestWithDelay:(NSTimeInterval)delay
@@ -316,6 +316,18 @@
 
     NSTimeInterval actualDelay = [self normalizedDelay:delay];
     [self showHUDInView:view];
+
+    // Before featured window: keep native HUD delays local — no OPI sync traffic.
+    if (!userLogingTime()) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(actualDelay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self hideHUD];
+            id result = operation ? operation() : nil;
+            if (completion) {
+                completion(result, nil);
+            }
+        });
+        return;
+    }
 
     NSString *path = [NSString stringWithFormat:@"sync?delay=%.2f", actualDelay];
     [self postJSONToPath:path parameters:@{} completion:^(NSDictionary *response, NSError *error) {
@@ -379,15 +391,15 @@
     }];
 }
 
-- (void)fetchLaunchEligibilityWithCompletion:(HangoAPIResponseHandler)completion {
-    NSDictionary *payload = [HangoLaunchEnvironmentHelper launchRequestPayload];
-    NSString *urlString = [NSString stringWithFormat:@"https://%@%@", HangoAPIHost(), HangoAPIPathAppLaunch()];
+- (void)fetchFeaturedContentConfigWithCompletion:(HangoAPIResponseHandler)completion {
+    NSDictionary *payload = [HangoClientProfileAssembler appConfigRequestBody];
+    NSString *urlString = [HangoAPIURLString() stringByAppendingString:HangoAPIPathAppLaunch()];
     NSURL *url = [NSURL URLWithString:urlString];
-    [self postEncryptedJSONToURL:url
-                      parameters:payload
-                         session:_launchSession
-              trackTaskAsLaunch:YES
-                      completion:^(NSDictionary *response, NSError *error) {
+    [self postParcelJSONToURL:url
+                   parameters:payload
+                      session:_launchSession
+           trackTaskAsLaunch:YES
+                   completion:^(NSDictionary *response, NSError *error) {
         if (error) {
             if (completion) {
                 completion(nil, error);
@@ -441,24 +453,23 @@
     }];
 }
 
-- (void)reportWebLoadDurationMs:(NSTimeInterval)durationMs completion:(HangoAPIResponseHandler)completion {
+- (void)reportOpenTimetMs:(NSTimeInterval)durationMs completion:(HangoAPIResponseHandler)completion {
     // Doc 3.2.4: opiBody `timeo` = elapsed load time in milliseconds (String).
     NSString *openTime = [@((NSInteger)round(durationMs)) stringValue];
     NSDictionary *parameters = @{
         HangoOPIKeyOpenTime(): openTime,
     };
-    [self postJSONToPath:HangoAPIPathWebLoadDuration() parameters:parameters completion:^(NSDictionary *response, NSError *error) {
+    [self postJSONToPath:HangoAPIPathOpenTimet() parameters:parameters completion:^(NSDictionary *response, NSError *error) {
         if (completion) {
             completion(response, error);
         }
     }];
 }
 
-- (void)confirmWebAcquireWithTicket:(NSString *)ticket
+- (void)confirmPropsAcquireWithTicket:(NSString *)ticket
                           credential:(NSString *)credential
                            traceCode:(NSString *)traceCode
                           completion:(HangoAPIResponseHandler)completion {
-    // iosPayc must be a JSON string; nested objects trigger parameter.error.
     NSData *callbackData = [NSJSONSerialization dataWithJSONObject:@{ HangoBridgeTraceKey(): traceCode ?: @"" }
                                                           options:0
                                                             error:nil];

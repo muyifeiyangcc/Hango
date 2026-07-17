@@ -12,7 +12,6 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)showMainTabBarSelectingProfileTab;
 + (void)showAuthEntry;
 + (void)showWelcome;
-+ (void)showFluxHostAnimated:(BOOL)animated;
 
 @end
 

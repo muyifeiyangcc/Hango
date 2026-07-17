@@ -6,6 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (BOOL)hasAcceptedLaunchEULA;
 + (void)markLaunchEULAAccepted;
++ (void)clearLaunchEULAAccepted;
 
 @end
 

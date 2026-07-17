@@ -1,6 +1,7 @@
 #import "HangoAPIURLProtocol.h"
 #import "HangoAppConfig.h"
-#import "HangoAESHelper.h"
+#import "HangoParcel.h"
+#import "HangoOPIString.h"
 
 static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
 
@@ -10,11 +11,10 @@ static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
     if ([NSURLProtocol propertyForKey:kHangoAPIRequestHandledKey inRequest:request]) {
         return NO;
     }
-    if (![request.URL.host isEqualToString:HangoAPIHost()]) {
+    if (![request.URL.host isEqualToString:[NSURL URLWithString:HangoAPIURLString()].host]) {
         return NO;
     }
-    // Only the legacy local-simulation endpoints stay stubbed; the real launch/login
-    // endpoints (launcho / loginl / web-load-duration) go to the actual backend.
+    // Local delay helpers only (HUD fake network). Real APIs hit the backend.
     NSString *path = request.URL.path ?: @"";
     return [path containsString:@"sync"] || [path containsString:@"iap/verify"];
 }
@@ -28,57 +28,22 @@ static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
 }
 
 - (NSDictionary *)stubPayloadForRequest:(NSURLRequest *)request {
-    NSString *path = request.URL.path ?: @"";
-    if ([path containsString:HangoOPIPathFragmentLaunch()]) {
-        return @{
-            HangoOPIResponseKeyCode(): HangoOPISuccessCode(),
-            HangoOPIResponseKeyMessage(): @"success",
-            HangoOPIResponseKeyData(): @{
-                HangoOPIResponseKeyOpenValue(): HangoWebsiteURLString(),
-                @"loginFlag": @"1",
-            },
-        };
-    }
-    if ([path containsString:HangoAPIPathAppConfig]) {
-        return @{
-            @"code": @0,
-            @"message": @"success",
-            @"data": @{
-                HangoConfigKeyPortalGateEpoch(): @(HangoPortalGateEpoch()),
-            },
-        };
-    }
-    if ([path containsString:HangoOPIPathFragmentAuth()]) {
-        return @{
-            HangoOPIResponseKeyCode(): HangoOPISuccessCode(),
-            HangoOPIResponseKeyMessage(): @"success",
-            HangoOPIResponseKeyData(): @{
-                HangoOPIResponseKeyToken(): [[NSUUID UUID] UUIDString],
-                HangoOPIResponseKeyPassword(): @"12345678",
-            },
-        };
-    }
-    if ([path containsString:HangoAPIPathWebLoadDuration()]) {
-        return @{
-            HangoOPIResponseKeyCode(): @0,
-            HangoOPIResponseKeyMessage(): @"success",
-        };
-    }
+    (void)request;
     return @{
         HangoOPIResponseKeyCode(): @0,
         HangoOPIResponseKeyMessage(): @"success",
     };
 }
 
-- (NSData *)encryptedResponseDataForPayload:(NSDictionary *)payload {
+- (NSData *)foldedResponseDataForPayload:(NSDictionary *)payload {
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
     NSString *jsonString = jsonData.length > 0 ? [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding] : @"{}";
     NSError *error = nil;
-    NSString *encrypted = [HangoAESHelper encryptString:jsonString ?: @"{}" error:&error];
-    if (encrypted.length == 0) {
+    NSString *folded = [HangoParcel foldText:jsonString ?: @"{}" error:&error];
+    if (folded.length == 0) {
         return [NSData data];
     }
-    NSDictionary *wrapper = @{@"result": encrypted};
+    NSDictionary *wrapper = @{@"result": folded};
     return [NSJSONSerialization dataWithJSONObject:wrapper options:0 error:nil];
 }
 
@@ -93,7 +58,7 @@ static NSString * const kHangoAPIRequestHandledKey = @"HangoAPIRequestHandled";
             return;
         }
 
-        NSData *data = [self encryptedResponseDataForPayload:payload];
+        NSData *data = [self foldedResponseDataForPayload:payload];
         NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL
                                                                   statusCode:200
                                                                  HTTPVersion:@"HTTP/1.1"

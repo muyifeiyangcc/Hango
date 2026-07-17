@@ -2,49 +2,55 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSInteger, HangoLaunchRoute) {
-    HangoLaunchRouteNative = 0,
-    HangoLaunchRouteWeb = 1,
-    HangoLaunchRouteOnboarding = 2,
-};
-
-@interface HangoLaunchDecision : NSObject
-@property (nonatomic, assign) HangoLaunchRoute route;
-@property (nonatomic, copy, nullable) NSString *webURLString;
+@interface HangoFeaturedContentPlan : NSObject
+/// When both flags are NO, the entry keeps the current login/register page.
+@property (nonatomic, assign) BOOL showsFeaturedPage;
+/// Eligible but no session yet — stay on Welcome and show member-login-only layout.
+@property (nonatomic, assign) BOOL awaitsMemberLogin;
+@property (nonatomic, copy, nullable) NSString *featuredPageAddress;
 @end
 
 @interface HangoStartupCoordinator : NSObject
 
 + (instancetype)shared;
 
-- (void)resolveLaunchDecisionWithCompletion:(void (^)(HangoLaunchDecision *decision))completion;
+/// Fetches featured-content config with retry semantics (no routing).
+- (void)fetchFeaturedContentConfigWithCompletion:(void (^)(NSDictionary * _Nullable response, NSError * _Nullable error))completion;
 
-/// Fetches startup config on the splash screen (spinner visible), then routes to the resolved destination.
-- (void)resolveLaunchDecisionAndApplyToWindow:(UIWindow *)window;
+/// Maps featured-content response to a presentation plan (does not check the time gate).
+- (HangoFeaturedContentPlan *)featuredContentPlanFromResponse:(NSDictionary * _Nullable)response error:(NSError * _Nullable)error;
 
-- (void)applyLaunchDecision:(HangoLaunchDecision *)decision toWindow:(UIWindow *)window;
+/// Full-screen LaunchScreen cover while waiting on the auth entry page.
+- (nullable UIView *)installFeaturedContentCoverOnWindow:(UIWindow *)window;
+- (void)removeFeaturedContentCover:(nullable UIView *)cover;
 
-- (void)completeWebEntryFromViewController:(UIViewController *)viewController
-                                completion:(void (^)(BOOL success, NSError * _Nullable error))completion;
+/// Replaces the current navigation stack with a single controller (no window root swap).
+- (void)replaceNavigationStackInWindow:(UIWindow *)window
+                    withViewController:(UIViewController *)viewController
+                              animated:(BOOL)animated;
 
-- (void)enterNativeInWindow:(UIWindow *)window;
+- (void)completeMemberLoginFromViewController:(UIViewController *)viewController
+                                   completion:(void (^)(BOOL success, NSError * _Nullable error))completion;
 
-/// Clears the web session and returns to the native quick-login screen (onboarding Welcome).
-- (void)enterWebQuickLoginInWindow:(UIWindow *)window animated:(BOOL)animated;
+- (void)enterWelcomePageInWindow:(UIWindow *)window;
 
-- (void)enterWebInWindow:(UIWindow *)window animated:(BOOL)animated;
+/// Cold start: keep LaunchScreen until featured-content routing is ready, then land on the final page.
+- (void)startAppInWindow:(UIWindow *)window;
+
+/// Clears the host session and returns to Welcome with member-login-only layout.
+- (void)presentMemberLoginInWindow:(UIWindow *)window animated:(BOOL)animated;
+
+- (void)presentFeaturedPageInWindow:(UIWindow *)window animated:(BOOL)animated;
 
 - (UIViewController *)launchSplashViewController;
 
-- (void)showLaunchSplashInWindow:(UIWindow *)window;
-
 - (BOOL)hasSession;
 
-/// The raw web host resolved from the launch interface (openValue).
-- (NSString *)webURLString;
+/// Resolved featured page address from app config.
+- (NSString *)featuredPageAddress;
 
-/// The full H5 URL with encrypted openParams (token + timestamp) and appId appended.
-- (NSString *)webEntryURLString;
+/// Featured page URL with folded open params (token + timestamp) and appId appended.
+- (NSString *)featuredPageNameString;
 
 @end
 

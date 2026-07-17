@@ -1,21 +1,19 @@
-#import "HangoLaunchEnvironmentHelper.h"
+#import "HangoClientProfileAssembler.h"
 #import "HangoOPIString.h"
-#import "HangoAESHelper.h"
-#import "HangoHUD.h"
-#import "HangoTheme.h"
+#import "HangoParcel.h"
 #import "HangoAPITokenStore.h"
 #import "HangoDataStore.h"
 #import "HangoSessionManager.h"
 #import "HangoMainTabBarController.h"
 #import "HangoProfileSetupViewController.h"
 #import "HangoWelcomeViewController.h"
-#import "HangoFluxHostViewController.h"
+#import "HangoFeaturedPageViewController.h"
 #import "HangoRequestManager.h"
 #import "HangoAppRouter.h"
 #import "HangoAppConfig.h"
 #import "HangoStartupCoordinator.h"
 
-static NSString * const kHangoWebURLKey = @"HangoWebURL";
+static NSString * const kFeaturedPageAddressKey = @"UserHeaderAddress";
 
 #if DEBUG
 #define HangoStartupLog(fmt, ...) NSLog(@"[HangoStartup] " fmt, ##__VA_ARGS__)
@@ -23,11 +21,10 @@ static NSString * const kHangoWebURLKey = @"HangoWebURL";
 #define HangoStartupLog(fmt, ...)
 #endif
 
-@implementation HangoLaunchDecision
+@implementation HangoFeaturedContentPlan
 @end
 
 @implementation HangoStartupCoordinator {
-    BOOL _quickLoginTransitionAnimated;
     void (^_launchFetchBlock)(void);
     NSUInteger _launchFetchGeneration;
     BOOL _launchFetchInFlight;
@@ -76,34 +73,34 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
     [HangoAPITokenStore setSessionToken:token];
 }
 
-- (NSString *)webURLString {
-    NSString *stored = [NSUserDefaults.standardUserDefaults stringForKey:kHangoWebURLKey];
-    return stored.length > 0 ? stored : HangoWebsiteURLString();
+- (NSString *)featuredPageAddress {
+    NSString *stored = [NSUserDefaults.standardUserDefaults stringForKey:kFeaturedPageAddressKey];
+    return stored.length > 0 ? stored : HangoOfficialSiteURLString();
 }
 
-- (NSString *)webEntryURLString {
-    NSString *base = [self webURLString];
+- (NSString *)featuredPageNameString {
+    NSString *base = [self featuredPageAddress];
 
     long long timestampMs = (long long)([[NSDate date] timeIntervalSince1970] * 1000.0);
     NSDictionary *openParams = @{
-        HangoOPIWebKeyToken(): [HangoAPITokenStore sessionToken] ?: @"",
-        HangoOPIWebKeyTimestamp(): @(timestampMs),
+        HangoOPIHeaderKeyToken(): [HangoAPITokenStore sessionToken] ?: @"",
+        HangoOPIHeaderKeyTimestamp(): @(timestampMs),
     };
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:openParams options:0 error:nil];
     NSString *jsonString = jsonData.length > 0 ? [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding] : @"{}";
 
-    NSString *encrypted = [HangoAESHelper encryptString:jsonString error:nil] ?: @"";
-    NSString *encoded = [encrypted stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet] ?: encrypted;
+    NSString *folded = [HangoParcel foldText:jsonString error:nil] ?: @"";
+    NSString *encoded = [folded stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet] ?: folded;
 
     NSString *separator = [base containsString:@"?"] ? @"&" : @"?";
-    return [NSString stringWithFormat:@"%@%@%@=%@&%@=%@", base, separator, HangoOPIWebKeyOpenParams(), encoded, HangoOPIKeyAppId(), HangoAppId];
+    return [NSString stringWithFormat:@"%@%@%@=%@&%@=%@", base, separator, HangoOPIHeaderKeyOpenParams(), encoded, HangoOPIKeyAppId(), HangoAppId];
 }
 
-- (void)storeWebURL:(NSString *)url {
+- (void)saveFeaturedPageAddress:(NSString *)url {
     if (url.length == 0) {
         return;
     }
-    [NSUserDefaults.standardUserDefaults setObject:url forKey:kHangoWebURLKey];
+    [NSUserDefaults.standardUserDefaults setObject:url forKey:kFeaturedPageAddressKey];
     [NSUserDefaults.standardUserDefaults synchronize];
 }
 
@@ -117,17 +114,12 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
     return nil;
 }
 
-- (BOOL)hasReachedPortalGateEpoch:(NSTimeInterval)epoch {
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    return now >= epoch;
-}
-
 - (BOOL)isFirstTimeLogin {
     // First-time login is determined solely by whether the user token is empty.
     return [HangoAPITokenStore sessionToken].length == 0;
 }
 
-- (BOOL)isLaunchEligibleCode:(id)value {
+- (BOOL)isFeaturedContentSuccessCode:(id)value {
     NSString *code = [self stringFromValue:value];
     return [code isEqualToString:HangoOPISuccessCode()];
 }
@@ -239,8 +231,12 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
     [self scheduleLaunchFetchRetryWithDelay:kHangoLaunchPermissionSettleDelay block:retryBlock];
 }
 
-- (void)fetchLaunchEligibilityStayingOnSplashWithCompletion:(void (^)(NSDictionary * _Nullable eligibility, NSError * _Nullable error))completion {
+- (void)fetchFeaturedContentConfigWithCompletion:(void (^)(NSDictionary * _Nullable eligibility, NSError * _Nullable error))completion {
     if (!completion) {
+        return;
+    }
+    if (!userLogingTime()) {
+        completion(nil, nil);
         return;
     }
 
@@ -298,30 +294,8 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
             [watchdogSelf scheduleLaunchFetchRetryWithDelay:1.0 block:tryFetch];
         });
 
-        [[HangoRequestManager shared] preflightDNSForAPIHostWithCompletion:^(BOOL dnsResolved) {
-            __strong typeof(weakSelf) innerSelf = weakSelf;
-            if (!innerSelf || finished || requestToken != innerSelf->_launchFetchGeneration) {
-                return;
-            }
-            if (!dnsResolved) {
-                innerSelf->_awaitingWirelessDataPermission = YES;
-                innerSelf->_launchFetchInFlight = NO;
-                attempt += 1;
-                if (attempt >= kHangoLaunchMaxNetworkRetries) {
-                    HangoStartupLog(@"DNS preflight exhausted, route primary");
-                    finishWithResult(nil, [NSError errorWithDomain:@"HangoStartup"
-                                                              code:-2
-                                                          userInfo:@{NSLocalizedDescriptionKey: @"DNS lookup failed."}]);
-                    return;
-                }
-                HangoStartupLog(@"DNS not ready yet (attempt %ld), stay on splash", (long)attempt);
-                [[HangoRequestManager shared] resetNetworkSessionForLaunchRetry];
-                [innerSelf scheduleLaunchFetchRetryWithDelay:kHangoLaunchDNSRetryInterval block:tryFetch];
-                return;
-            }
-
-            innerSelf->_awaitingWirelessDataPermission = NO;
-            [[HangoRequestManager shared] fetchLaunchEligibilityWithCompletion:^(NSDictionary *eligibility, NSError *eligibilityError) {
+        // Direct request triggers the system network-permission sheet; no DNS preflight.
+        [[HangoRequestManager shared] fetchFeaturedContentConfigWithCompletion:^(NSDictionary *eligibility, NSError *eligibilityError) {
             __strong typeof(weakSelf) httpSelf = weakSelf;
             if (!httpSelf || finished || requestToken != httpSelf->_launchFetchGeneration) {
                 return;
@@ -329,6 +303,7 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
             httpSelf->_launchFetchInFlight = NO;
 
             if (!eligibilityError && eligibility.count > 0) {
+                httpSelf->_awaitingWirelessDataPermission = NO;
                 finishWithResult(eligibility, nil);
                 return;
             }
@@ -364,7 +339,6 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
 
             finishWithResult(eligibility, eligibilityError);
         }];
-        }];
     };
 
     _launchFetchInFlight = NO;
@@ -374,85 +348,60 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
     tryFetch();
 }
 
-- (void)resolveLaunchDecisionWithCompletion:(void (^)(HangoLaunchDecision *))completion {
-    if (!completion) {
-        return;
+- (HangoFeaturedContentPlan *)featuredContentPlanFromResponse:(NSDictionary *)eligibility error:(NSError *)eligibilityError {
+    HangoFeaturedContentPlan *decision = [[HangoFeaturedContentPlan alloc] init];
+
+    if (eligibilityError || eligibility.count == 0) {
+        HangoStartupLog(@"startup config failed, route primary");
+        return decision;
     }
 
-    // Before portal gate epoch: force primary route without calling startup config API.
-    if (![self hasReachedPortalGateEpoch:HangoPortalGateEpoch()]) {
-        HangoStartupLog(@"before gate epoch, route primary");
-        HangoLaunchDecision *decision = [[HangoLaunchDecision alloc] init];
-        decision.route = HangoLaunchRouteNative;
-        completion(decision);
-        return;
+    NSString *code = [self stringFromValue:eligibility[HangoOPIResponseKeyCode()]];
+    BOOL eligible = [self isFeaturedContentSuccessCode:code];
+    HangoStartupLog(@"startup config code=%@ eligible=%@", code, eligible ? @"YES" : @"NO");
+
+    if (!eligible) {
+        HangoStartupLog(@"ineligible code, route primary");
+        return decision;
     }
 
-    HangoStartupLog(@"fetching startup config on splash");
-    [self fetchLaunchEligibilityStayingOnSplashWithCompletion:^(NSDictionary *eligibility, NSError *eligibilityError) {
-        HangoStartupLog(@"startup config response=%@ error=%@", eligibility, eligibilityError);
+    NSDictionary *data = [eligibility[HangoOPIResponseKeyData()] isKindOfClass:NSDictionary.class] ? eligibility[HangoOPIResponseKeyData()] : eligibility;
+    NSString *openValue = [data[HangoOPIResponseKeyOpenValue()] isKindOfClass:NSString.class] ? data[HangoOPIResponseKeyOpenValue()] : nil;
+    [self saveFeaturedPageAddress:openValue];
+    decision.featuredPageAddress = openValue;
 
-        HangoLaunchDecision *decision = [[HangoLaunchDecision alloc] init];
-
-        if (eligibilityError || eligibility.count == 0) {
-            HangoStartupLog(@"startup config failed, route primary");
-            decision.route = HangoLaunchRouteNative;
-            completion(decision);
-            return;
-        }
-
-        NSString *code = [self stringFromValue:eligibility[HangoOPIResponseKeyCode()]];
-        BOOL eligible = [self isLaunchEligibleCode:code];
-        HangoStartupLog(@"startup config code=%@ eligible=%@", code, eligible ? @"YES" : @"NO");
-
-        if (!eligible) {
-            HangoStartupLog(@"ineligible code, route primary");
-            decision.route = HangoLaunchRouteNative;
-            completion(decision);
-            return;
-        }
-
-        NSDictionary *data = [eligibility[HangoOPIResponseKeyData()] isKindOfClass:NSDictionary.class] ? eligibility[HangoOPIResponseKeyData()] : eligibility;
-        NSString *openValue = [data[HangoOPIResponseKeyOpenValue()] isKindOfClass:NSString.class] ? data[HangoOPIResponseKeyOpenValue()] : nil;
-        [self storeWebURL:openValue];
-        decision.webURLString = openValue;
-
-        if ([self isFirstTimeLogin]) {
-            HangoStartupLog(@"eligible, no session → onboarding");
-            decision.route = HangoLaunchRouteOnboarding;
-        } else {
-            HangoStartupLog(@"eligible, has session → alternate");
-            decision.route = HangoLaunchRouteWeb;
-        }
-        completion(decision);
-    }];
+    if ([self isFirstTimeLogin]) {
+        HangoStartupLog(@"eligible, no session → member login");
+        decision.awaitsMemberLogin = YES;
+    } else {
+        HangoStartupLog(@"eligible, has session → featured page");
+        decision.showsFeaturedPage = YES;
+    }
+    return decision;
 }
 
-- (void)resolveLaunchDecisionAndApplyToWindow:(UIWindow *)window {
+- (UIView *)installFeaturedContentCoverOnWindow:(UIWindow *)window {
     if (!window) {
-        return;
+        return nil;
     }
-
-    BOOL pastPortalGate = [self hasReachedPortalGateEpoch:HangoPortalGateEpoch()];
-    if (pastPortalGate) {
-        // Stay on splash with a spinner until startup config finishes.
-        [self showLaunchSplashWaitingIndicatorInWindow:window];
+    UIView *existing = [window viewWithTag:0x48414E47];
+    if (existing) {
+        return existing;
     }
-
-    __weak typeof(self) weakSelf = self;
-    [self resolveLaunchDecisionWithCompletion:^(HangoLaunchDecision *decision) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) {
-            return;
-        }
-        if (pastPortalGate) {
-            [strongSelf hideLaunchSplashWaitingIndicatorInWindow:window];
-        }
-        [strongSelf applyLaunchDecision:decision toWindow:window];
-    }];
+    UIViewController *splash = [self launchSplashViewController];
+    UIView *cover = splash.view;
+    cover.tag = 0x48414E47;
+    cover.frame = window.bounds;
+    cover.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [window addSubview:cover];
+    return cover;
 }
 
-- (UIViewController *)nativeRootViewController {
+- (void)removeFeaturedContentCover:(UIView *)cover {
+    [cover removeFromSuperview];
+}
+
+- (UIViewController *)welcomePageRootViewController {
     if ([HangoSessionManager shared].isLoggedIn) {
         if ([[HangoDataStore shared] hasCompletedProfile]) {
             HangoMainTabBarController *tab = [HangoMainTabBarController mainTabBarController];
@@ -470,118 +419,149 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
         return tab;
     }
 
-    return [HangoAppRouter authEntryViewController];
-}
-
-- (UINavigationController *)onboardingNavigationController {
     HangoWelcomeViewController *welcome = [[HangoWelcomeViewController alloc] init];
-    welcome.onboardingMode = YES;
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:welcome];
     nav.navigationBarHidden = YES;
     return nav;
 }
 
 - (UIViewController *)launchSplashViewController {
-    UIViewController *loading = [[UIViewController alloc] init];
-    loading.view.backgroundColor = [HangoTheme backgroundTopColor];
-
-    UIImageView *splash = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"launch_splash"]];
-    splash.contentMode = UIViewContentModeScaleAspectFill;
-    splash.clipsToBounds = YES;
-    splash.translatesAutoresizingMaskIntoConstraints = NO;
-    [loading.view addSubview:splash];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [splash.topAnchor constraintEqualToAnchor:loading.view.topAnchor],
-        [splash.bottomAnchor constraintEqualToAnchor:loading.view.bottomAnchor],
-        [splash.leadingAnchor constraintEqualToAnchor:loading.view.leadingAnchor],
-        [splash.trailingAnchor constraintEqualToAnchor:loading.view.trailingAnchor],
-    ]];
-    return loading;
+    return [[UIStoryboard storyboardWithName:@"LaunchScreen" bundle:nil] instantiateInitialViewController];
 }
 
-- (void)showLaunchSplashWaitingIndicatorInWindow:(UIWindow *)window {
-    UIView *container = window.rootViewController.view;
-    if (!container) {
-        return;
-    }
-    if ([container viewWithTag:0x48414E47]) {
-        return;
-    }
-    [HangoHUD showHUDAddedTo:container animated:YES];
+- (void)enterWelcomePageInWindow:(UIWindow *)window {
+    window.rootViewController = [self welcomePageRootViewController];
+    [window makeKeyAndVisible];
 }
 
-- (void)hideLaunchSplashWaitingIndicatorInWindow:(UIWindow *)window {
-    UIView *container = window.rootViewController.view;
-    if (!container) {
+- (void)startAppInWindow:(UIWindow *)window {
+    if (!window) {
         return;
     }
-    [HangoHUD hideHUDForView:container animated:YES];
-}
 
-- (void)showLaunchSplashInWindow:(UIWindow *)window {
+    // Native A session/guest already decided — no featured-content wait.
+    if ([HangoSessionManager shared].isLoggedIn || [HangoSessionManager shared].isGuest) {
+        [self enterWelcomePageInWindow:window];
+        return;
+    }
+
+    if (!userLogingTime()) {
+        [self enterWelcomePageInWindow:window];
+        return;
+    }
+
+    // Keep LaunchScreen up until routing is ready, so Welcome never flashes first.
     window.rootViewController = [self launchSplashViewController];
     [window makeKeyAndVisible];
-}
-
-- (void)enterNativeInWindow:(UIWindow *)window {
-    window.rootViewController = [self nativeRootViewController];
-    [window makeKeyAndVisible];
-}
-
-- (void)enterWebQuickLoginInWindow:(UIWindow *)window animated:(BOOL)animated {
-    [HangoAPITokenStore setSessionToken:@""];
-    [HangoAPITokenStore setInitialPassword:@""];
-
-    _quickLoginTransitionAnimated = animated;
 
     __weak typeof(self) weakSelf = self;
-    void (^showOnboarding)(void) = ^{
+    [self fetchFeaturedContentConfigWithCompletion:^(NSDictionary *response, NSError *error) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) {
             return;
         }
-        UINavigationController *nav = [strongSelf onboardingNavigationController];
-        if (!strongSelf->_quickLoginTransitionAnimated) {
-            window.rootViewController = nav;
-            [window makeKeyAndVisible];
-            return;
-        }
-        [HangoAppRouter setRootViewController:nav animated:YES];
-    };
-
-    showOnboarding();
+        HangoFeaturedContentPlan *plan = [strongSelf featuredContentPlanFromResponse:response error:error];
+        [strongSelf applyFeaturedContentPlan:plan toWindow:window];
+    }];
 }
 
-- (void)enterWebInWindow:(UIWindow *)window animated:(BOOL)animated {
-    HangoFluxHostViewController *fluxHost = [[HangoFluxHostViewController alloc] init];
-    if (!animated) {
-        window.rootViewController = fluxHost;
+- (void)applyFeaturedContentPlan:(HangoFeaturedContentPlan *)plan toWindow:(UIWindow *)window {
+    if (!window) {
+        return;
+    }
+
+    if (plan.showsFeaturedPage) {
+        HangoFeaturedPageViewController *page = [[HangoFeaturedPageViewController alloc] init];
+        UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:page];
+        nav.navigationBarHidden = YES;
+        window.rootViewController = nav;
         [window makeKeyAndVisible];
         return;
     }
-    [HangoAppRouter setRootViewController:fluxHost animated:YES];
-}
 
-- (void)applyLaunchDecision:(HangoLaunchDecision *)decision toWindow:(UIWindow *)window {
-    switch (decision.route) {
-        case HangoLaunchRouteNative:
-            [self enterNativeInWindow:window];
-            break;
-        case HangoLaunchRouteWeb:
-            window.rootViewController = [[HangoFluxHostViewController alloc] init];
-            [window makeKeyAndVisible];
-            break;
-        case HangoLaunchRouteOnboarding:
-            window.rootViewController = [self onboardingNavigationController];
-            [window makeKeyAndVisible];
-            break;
+    HangoWelcomeViewController *welcome = [[HangoWelcomeViewController alloc] init];
+    if (plan.awaitsMemberLogin) {
+        welcome.showsMemberLoginOnly = YES;
     }
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:welcome];
+    nav.navigationBarHidden = YES;
+    window.rootViewController = nav;
+    [window makeKeyAndVisible];
 }
 
-- (void)completeWebEntryFromViewController:(UIViewController *)viewController
-                                completion:(void (^)(BOOL, NSError *))completion {
-    NSDictionary *params = [HangoLaunchEnvironmentHelper loginRequestPayload];
+- (UINavigationController *)navigationControllerInWindow:(UIWindow *)window {
+    if (!window) {
+        return nil;
+    }
+    UIViewController *root = window.rootViewController;
+    if ([root isKindOfClass:UINavigationController.class]) {
+        return (UINavigationController *)root;
+    }
+    if ([root isKindOfClass:UITabBarController.class]) {
+        UIViewController *selected = ((UITabBarController *)root).selectedViewController;
+        if ([selected isKindOfClass:UINavigationController.class]) {
+            return (UINavigationController *)selected;
+        }
+    }
+    return nil;
+}
+
+- (void)replaceNavigationStackInWindow:(UIWindow *)window
+                    withViewController:(UIViewController *)viewController
+                              animated:(BOOL)animated {
+    if (!window || !viewController) {
+        return;
+    }
+
+    UINavigationController *nav = [self navigationControllerInWindow:window];
+    if (nav) {
+        if (!animated) {
+            nav.viewControllers = @[viewController];
+            return;
+        }
+        [nav pushViewController:viewController animated:YES];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            nav.viewControllers = @[viewController];
+        });
+        return;
+    }
+
+    UINavigationController *newNav = [[UINavigationController alloc] initWithRootViewController:viewController];
+    newNav.navigationBarHidden = YES;
+    if (!animated) {
+        window.rootViewController = newNav;
+        [window makeKeyAndVisible];
+        return;
+    }
+    [HangoAppRouter setRootViewController:newNav animated:YES];
+}
+
+- (void)presentMemberLoginInWindow:(UIWindow *)window animated:(BOOL)animated {
+    [HangoAPITokenStore setSessionToken:@""];
+    [HangoAPITokenStore setInitialPassword:@""];
+
+    HangoWelcomeViewController *welcome = [[HangoWelcomeViewController alloc] init];
+    welcome.showsMemberLoginOnly = YES;
+    [self replaceNavigationStackInWindow:window withViewController:welcome animated:animated];
+}
+
+- (void)presentFeaturedPageInWindow:(UIWindow *)window animated:(BOOL)animated {
+    HangoFeaturedPageViewController *featuredPage = [[HangoFeaturedPageViewController alloc] init];
+    [self replaceNavigationStackInWindow:window withViewController:featuredPage animated:animated];
+}
+
+- (void)completeMemberLoginFromViewController:(UIViewController *)viewController
+                                   completion:(void (^)(BOOL, NSError *))completion {
+    if (!userLogingTime()) {
+        if (completion) {
+            completion(NO, [NSError errorWithDomain:@"HangoStartup"
+                                               code:2
+                                           userInfo:@{NSLocalizedDescriptionKey: @"Entry unavailable."}]);
+        }
+        return;
+    }
+
+    NSDictionary *params = [HangoClientProfileAssembler signInRequestParameters];
     HangoStartupLog(@"auth request submitted");
 
     [[HangoRequestManager shared] submitAuthWithParameters:params

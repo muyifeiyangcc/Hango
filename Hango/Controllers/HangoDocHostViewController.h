@@ -2,7 +2,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface HangoWebPageViewController : HangoBaseViewController
+@interface HangoDocHostViewController : HangoBaseViewController
 
 + (instancetype)memberAgreementViewController;
 + (instancetype)privacyPolicyViewController;

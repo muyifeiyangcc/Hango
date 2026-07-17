@@ -1,8 +1,8 @@
-#import "HangoAESHelper.h"
+#import "HangoParcel.h"
 #import "HangoAppConfig.h"
 #import <CommonCrypto/CommonCrypto.h>
 
-@implementation HangoAESHelper
+@implementation HangoParcel
 
 + (NSData *)dataFromHexString:(NSString *)hex {
     if (hex.length == 0) {
@@ -37,16 +37,16 @@
     return hex.copy;
 }
 
-+ (nullable NSData *)cryptData:(NSData *)data
-                     operation:(CCOperation)operation
++ (nullable NSData *)reshapeData:(NSData *)data
+                       direction:(CCOperation)direction
                            error:(NSError **)error {
-    NSData *keyData = [HangoAESKey dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *ivData = [HangoAESIV dataUsingEncoding:NSUTF8StringEncoding];
-    if (keyData.length != kCCKeySizeAES128 || ivData.length != kCCBlockSizeAES128) {
+    NSData *keyData = [HangoContentKey dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *vectorData = [HangoContentIV dataUsingEncoding:NSUTF8StringEncoding];
+    if (keyData.length != kCCKeySizeAES128 || vectorData.length != kCCBlockSizeAES128) {
         if (error) {
-            *error = [NSError errorWithDomain:@"HangoAES"
+            *error = [NSError errorWithDomain:@"HangoParcel"
                                          code:-1
-                                     userInfo:@{NSLocalizedDescriptionKey: @"Invalid AES key or IV length."}];
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Invalid nest material length."}];
         }
         return nil;
     }
@@ -55,20 +55,20 @@
     void *outputBytes = malloc(outputLength);
     if (!outputBytes) {
         if (error) {
-            *error = [NSError errorWithDomain:@"HangoAES"
+            *error = [NSError errorWithDomain:@"HangoParcel"
                                          code:-2
-                                     userInfo:@{NSLocalizedDescriptionKey: @"Unable to allocate AES buffer."}];
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Unable to allocate nest buffer."}];
         }
         return nil;
     }
 
     size_t bytesProcessed = 0;
-    CCCryptorStatus status = CCCrypt(operation,
+    CCCryptorStatus status = CCCrypt(direction,
                                      kCCAlgorithmAES,
                                      kCCOptionPKCS7Padding,
                                      keyData.bytes,
                                      keyData.length,
-                                     ivData.bytes,
+                                     vectorData.bytes,
                                      data.bytes,
                                      data.length,
                                      outputBytes,
@@ -77,9 +77,9 @@
     if (status != kCCSuccess) {
         free(outputBytes);
         if (error) {
-            *error = [NSError errorWithDomain:@"HangoAES"
+            *error = [NSError errorWithDomain:@"HangoParcel"
                                          code:status
-                                     userInfo:@{NSLocalizedDescriptionKey: @"AES operation failed."}];
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Nest reshape failed."}];
         }
         return nil;
     }
@@ -87,36 +87,36 @@
     return [NSData dataWithBytesNoCopy:outputBytes length:bytesProcessed freeWhenDone:YES];
 }
 
-+ (nullable NSString *)encryptString:(NSString *)plaintext error:(NSError **)error {
-    if (plaintext.length == 0) {
++ (nullable NSString *)foldText:(NSString *)text error:(NSError **)error {
+    if (text.length == 0) {
         if (error) {
-            *error = [NSError errorWithDomain:@"HangoAES"
+            *error = [NSError errorWithDomain:@"HangoParcel"
                                          code:-3
-                                     userInfo:@{NSLocalizedDescriptionKey: @"Plaintext is empty."}];
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Input text is empty."}];
         }
         return nil;
     }
 
-    NSData *plainData = [plaintext dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *encrypted = [self cryptData:plainData operation:kCCEncrypt error:error];
-    if (!encrypted) {
+    NSData *sourceData = [text dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *folded = [self reshapeData:sourceData direction:kCCEncrypt error:error];
+    if (!folded) {
         return nil;
     }
-    return [self hexStringFromData:encrypted];
+    return [self hexStringFromData:folded];
 }
 
-+ (NSString *)decryptString:(NSString *)cipherHex {
-    NSData *cipherData = [self dataFromHexString:cipherHex];
-    if (cipherData.length == 0) {
++ (NSString *)openBlob:(NSString *)blob {
+    NSData *blobData = [self dataFromHexString:blob];
+    if (blobData.length == 0) {
         return @"";
     }
 
     NSError *error = nil;
-    NSData *decrypted = [self cryptData:cipherData operation:kCCDecrypt error:&error];
-    if (!decrypted) {
+    NSData *opened = [self reshapeData:blobData direction:kCCDecrypt error:&error];
+    if (!opened) {
         return @"";
     }
-    return [[NSString alloc] initWithData:decrypted encoding:NSUTF8StringEncoding] ?: @"";
+    return [[NSString alloc] initWithData:opened encoding:NSUTF8StringEncoding] ?: @"";
 }
 
 @end

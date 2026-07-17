@@ -1,7 +1,6 @@
 #import "SceneDelegate.h"
 #import "HangoTheme.h"
 #import "HangoStartupCoordinator.h"
-#import "HangoAppConfig.h"
 #import "AppDelegate.h"
 
 @implementation SceneDelegate
@@ -15,8 +14,7 @@
     ((AppDelegate *)UIApplication.sharedApplication.delegate).window = self.window;
 
     HangoStartupCoordinator *startupCoordinator = [HangoStartupCoordinator shared];
-    [startupCoordinator showLaunchSplashInWindow:self.window];
-    [startupCoordinator resolveLaunchDecisionAndApplyToWindow:self.window];
+    [startupCoordinator startAppInWindow:self.window];
 }
 
 @end

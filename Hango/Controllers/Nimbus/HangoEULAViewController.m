@@ -2,7 +2,7 @@
 #import "HangoEULAViewController.h"
 #import "HangoAppRouter.h"
 #import "HangoEULAAcceptance.h"
-#import "HangoWebPageViewController.h"
+#import "HangoDocHostViewController.h"
 #import "HangoDesignKit.h"
 #import "HangoTheme.h"
 #import "HGXAnchor.h"
@@ -264,11 +264,11 @@ static NSString * const kHangoEULABodyText =
 }
 
 - (void)openTermsOfUse {
-    [self.navigationController pushViewController:[HangoWebPageViewController memberAgreementViewController] animated:YES];
+    [self.navigationController pushViewController:[HangoDocHostViewController memberAgreementViewController] animated:YES];
 }
 
 - (void)openPrivacyPolicy {
-    [self.navigationController pushViewController:[HangoWebPageViewController privacyPolicyViewController] animated:YES];
+    [self.navigationController pushViewController:[HangoDocHostViewController privacyPolicyViewController] animated:YES];
 }
 
 - (void)cancelTapped {
@@ -278,11 +278,11 @@ static NSString * const kHangoEULABodyText =
 - (void)agreeTapped {
     _agreed = YES;
     [self updateAgreeCheckImage];
+    [HangoEULAAcceptance markLaunchEULAAccepted];
     if (self.onAgreementConfirmed) {
         self.onAgreementConfirmed();
     }
     if (self.isLaunchGate) {
-        [HangoEULAAcceptance markLaunchEULAAccepted];
         [HangoAppRouter showWelcome];
         return;
     }

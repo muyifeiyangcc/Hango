@@ -1,5 +1,5 @@
 #import "HangoKeyboardManager.h"
-#import "HangoFluxHostViewController.h"
+#import "HangoFeaturedPageViewController.h"
 #import <WebKit/WebKit.h>
 
 @implementation HangoKeyboardManager
@@ -52,7 +52,7 @@
     return controller;
 }
 
-+ (BOOL)isViewInsideWebView:(UIView *)view {
++ (BOOL)isViewInsideHostCanvas:(UIView *)view {
     while (view) {
         if ([view isKindOfClass:WKWebView.class]) {
             return YES;
@@ -72,9 +72,9 @@
     if (!firstResponder) {
         return;
     }
-    // WKWebView handles keyboard layout itself; shifting the whole shell pushes
+    // Host canvas handles keyboard layout itself; shifting the whole window pushes
     // top inputs off-screen and displaces video/chat layouts.
-    if ([self isViewInsideWebView:firstResponder]) {
+    if ([self isViewInsideHostCanvas:firstResponder]) {
         if (!CGAffineTransformIsIdentity(top.view.transform)) {
             top.view.transform = CGAffineTransformIdentity;
         }
@@ -96,7 +96,7 @@
     NSDictionary *info = notification.userInfo;
     UIWindow *window = [self keyWindow];
     UIViewController *top = [self topViewControllerFrom:window.rootViewController];
-    if ([top isKindOfClass:HangoFluxHostViewController.class]) {
+    if ([top isKindOfClass:HangoFeaturedPageViewController.class]) {
         top.view.transform = CGAffineTransformIdentity;
         return;
     }

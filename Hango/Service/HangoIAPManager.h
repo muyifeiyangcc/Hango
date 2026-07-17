@@ -20,6 +20,13 @@ NS_ASSUME_NONNULL_BEGIN
                   success:(void (^)(NSInteger sparkles))success
                   failure:(void (^)(NSError *error))failure;
 
+/// Featured-page batch acquire (product id = batchNo). Same StoreKit queue as sparkle purchases.
+- (void)acquireBatchNo:(NSString *)batchNo
+             traceCode:(NSString *)traceCode
+            completion:(void (^)(BOOL success,
+                                   NSDictionary * _Nullable response,
+                                   NSError * _Nullable error))completion;
+
 @end
 
 NS_ASSUME_NONNULL_END

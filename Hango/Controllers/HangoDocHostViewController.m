@@ -1,24 +1,24 @@
 #import "HangoDisplayString.h"
-#import "HangoWebPageViewController.h"
+#import "HangoDocHostViewController.h"
 #import "HangoAppConfig.h"
 #import "HangoTheme.h"
 #import "HGXAnchor.h"
 #import <WebKit/WebKit.h>
 
-@interface HangoWebPageViewController () <WKNavigationDelegate, UIScrollViewDelegate>
+@interface HangoDocHostViewController () <WKNavigationDelegate, UIScrollViewDelegate>
 @property (nonatomic, copy) NSString *pageURLString;
 @property (nonatomic, copy) NSString *pageTitle;
-@property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) WKWebView *hostView;
 @property (nonatomic, strong) UIProgressView *progressView;
 @property (nonatomic, assign) BOOL hasCompletedInitialLoad;
 @end
 
-@implementation HangoWebPageViewController
+@implementation HangoDocHostViewController
 
 + (NSString *)pageBackgroundStyleScript {
     return @"(function() {"
     "  var gradient = 'linear-gradient(180deg, #B8E8FA 0%, #E0F7FA 100%)';"
-    "  var css = 'html, body, #app, main, .legal-page, .agreement, .protocol, .hango-app-shell { overflow-x: hidden !important; width: 100% !important; max-width: 100% !important; min-height: 100% !important; background: ' + gradient + ' !important; background-color: #B8E8FA !important; } .legal-heading, .T_title, .bt { color: #7f1146 !important; } .legal-content, .T_content { color: #000 !important; background: transparent !important; }';"
+    "  var css = 'html, body, #app, main, .legal-page, .agreement, .protocol, .hango-app-frame { overflow-x: hidden !important; width: 100% !important; max-width: 100% !important; min-height: 100% !important; background: ' + gradient + ' !important; background-color: #B8E8FA !important; } .legal-heading, .T_title, .bt { color: #7f1146 !important; } .legal-content, .T_content { color: #000 !important; background: transparent !important; }';"
     "  var style = document.getElementById('hango-page-style');"
     "  if (!style) {"
     "    style = document.createElement('style');"
@@ -36,25 +36,25 @@
 }
 
 - (void)applyPageBackgroundStyles {
-    [_webView evaluateJavaScript:[self.class pageBackgroundStyleScript] completionHandler:nil];
+    [_hostView evaluateJavaScript:[self.class pageBackgroundStyleScript] completionHandler:nil];
 }
 
 + (instancetype)memberAgreementViewController {
-    HangoWebPageViewController *vc = [[HangoWebPageViewController alloc] init];
-    vc.pageURLString = HangoPersonaAgreementURLString();
+    HangoDocHostViewController *vc = [[HangoDocHostViewController alloc] init];
+    vc.pageURLString = [HangoOfficialSiteURLString() stringByAppendingString:@"/users"];
     vc.pageTitle = HangoDisplayString(HangoDisplayStringKeyUserAgreement);
     return vc;
 }
 
 + (instancetype)privacyPolicyViewController {
-    HangoWebPageViewController *vc = [[HangoWebPageViewController alloc] init];
-    vc.pageURLString = HangoPrivacyPolicyURLString();
+    HangoDocHostViewController *vc = [[HangoDocHostViewController alloc] init];
+    vc.pageURLString = [HangoOfficialSiteURLString() stringByAppendingString:@"/privacy"];
     vc.pageTitle = @"Privacy Policy";
     return vc;
 }
 
 - (void)dealloc {
-    [_webView removeObserver:self forKeyPath:NSStringFromSelector(@selector(estimatedProgress))];
+    [_hostView removeObserver:self forKeyPath:NSStringFromSelector(@selector(estimatedProgress))];
 }
 
 - (void)setupUI {
@@ -72,24 +72,24 @@
     [configuration.userContentController addUserScript:startScript];
     [configuration.userContentController addUserScript:endScript];
 
-    _webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
+    _hostView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
     UIColor *pageBackgroundColor = [HangoTheme backgroundTopColor];
-    _webView.backgroundColor = pageBackgroundColor;
-    _webView.scrollView.backgroundColor = pageBackgroundColor;
+    _hostView.backgroundColor = pageBackgroundColor;
+    _hostView.scrollView.backgroundColor = pageBackgroundColor;
     if (@available(iOS 15.0, *)) {
-        _webView.underPageBackgroundColor = pageBackgroundColor;
+        _hostView.underPageBackgroundColor = pageBackgroundColor;
     }
-    _webView.opaque = NO;
-    _webView.navigationDelegate = self;
-    _webView.scrollView.alwaysBounceHorizontal = NO;
-    _webView.scrollView.showsHorizontalScrollIndicator = NO;
-    _webView.scrollView.directionalLockEnabled = YES;
-    _webView.scrollView.delegate = self;
-    [_webView addObserver:self
+    _hostView.opaque = NO;
+    _hostView.navigationDelegate = self;
+    _hostView.scrollView.alwaysBounceHorizontal = NO;
+    _hostView.scrollView.showsHorizontalScrollIndicator = NO;
+    _hostView.scrollView.directionalLockEnabled = YES;
+    _hostView.scrollView.delegate = self;
+    [_hostView addObserver:self
                forKeyPath:NSStringFromSelector(@selector(estimatedProgress))
                   options:NSKeyValueObservingOptionNew
                   context:nil];
-    [self.contentView addSubview:_webView];
+    [self.contentView addSubview:_hostView];
 
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.progressTintColor = [HangoTheme accentBlueColor];
@@ -103,7 +103,7 @@
         make.left.right.equalTo(self.contentView);
         make.height.hgx_equalTo(2);
     }];
-    [_webView hgx_makeConstraints:^(HGXConstraintMaker *make) {
+    [_hostView hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.top.equalTo(_progressView.hgx_bottom);
         make.left.right.bottom.equalTo(self.contentView);
     }];
@@ -111,7 +111,7 @@
     NSURL *url = [NSURL URLWithString:self.pageURLString];
     if (url) {
         [self showProgressBar];
-        [_webView loadRequest:[NSURLRequest requestWithURL:url]];
+        [_hostView loadRequest:[NSURLRequest requestWithURL:url]];
     }
 }
 
@@ -129,7 +129,7 @@
                       ofObject:(id)object
                         change:(NSDictionary<NSKeyValueChangeKey, id> *)change
                        context:(void *)context {
-    if (object != _webView || ![keyPath isEqualToString:NSStringFromSelector(@selector(estimatedProgress))]) {
+    if (object != _hostView || ![keyPath isEqualToString:NSStringFromSelector(@selector(estimatedProgress))]) {
         return;
     }
     if (self.hasCompletedInitialLoad) {
@@ -137,7 +137,7 @@
         return;
     }
 
-    float progress = (float)_webView.estimatedProgress;
+    float progress = (float)_hostView.estimatedProgress;
     _progressView.progress = progress;
     _progressView.hidden = progress <= 0;
 
@@ -148,17 +148,17 @@
     }
 }
 
-- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation {
+- (void)webView:(WKWebView *)host didStartProvisionalNavigation:(WKNavigation *)navigation {
     if (self.hasCompletedInitialLoad) {
         [self hideProgressBar];
     }
 }
 
-- (void)webView:(WKWebView *)webView didCommitNavigation:(WKNavigation *)navigation {
+- (void)webView:(WKWebView *)host didCommitNavigation:(WKNavigation *)navigation {
     [self applyPageBackgroundStyles];
 }
 
-- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+- (void)webView:(WKWebView *)host didFinishNavigation:(WKNavigation *)navigation {
     if (!self.hasCompletedInitialLoad) {
         self.hasCompletedInitialLoad = YES;
         [self hideProgressBar];
@@ -166,14 +166,14 @@
     [self applyPageBackgroundStyles];
 }
 
-- (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+- (void)webView:(WKWebView *)host didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     if (!self.hasCompletedInitialLoad) {
         self.hasCompletedInitialLoad = YES;
     }
     [self hideProgressBar];
 }
 
-- (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+- (void)webView:(WKWebView *)host didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     if (!self.hasCompletedInitialLoad) {
         self.hasCompletedInitialLoad = YES;
     }
@@ -181,7 +181,7 @@
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
-    if (scrollView != _webView.scrollView) {
+    if (scrollView != _hostView.scrollView) {
         return;
     }
     if (scrollView.contentOffset.x != 0) {

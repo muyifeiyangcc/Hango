@@ -22,7 +22,7 @@ typedef void(^HangoAPIResponseHandler)(NSDictionary * _Nullable response, NSErro
 
 - (void)fetchAppConfigWithCompletion:(HangoAPIResponseHandler)completion;
 
-- (void)fetchLaunchEligibilityWithCompletion:(HangoAPIResponseHandler)completion;
+- (void)fetchFeaturedContentConfigWithCompletion:(HangoAPIResponseHandler)completion;
 
 /// Recreates the launch URL session so DNS/connectivity state refreshes after the iOS wireless-data prompt.
 - (void)resetNetworkSessionForLaunchRetry;
@@ -30,7 +30,7 @@ typedef void(^HangoAPIResponseHandler)(NSDictionary * _Nullable response, NSErro
 /// Cancels the in-flight launch request (e.g. watchdog timeout).
 - (void)cancelLaunchRequest;
 
-/// Forces a fresh DNS lookup for the API host before launcho (bypasses stale URLSession DNS cache).
+/// Forces a fresh DNS lookup for the API host before launch (bypasses stale URLSession DNS cache).
 - (void)preflightDNSForAPIHostWithCompletion:(void (^)(BOOL resolved))completion;
 
 - (void)submitAuthWithParameters:(NSDictionary *)parameters
@@ -38,11 +38,11 @@ typedef void(^HangoAPIResponseHandler)(NSDictionary * _Nullable response, NSErro
                         showsHUD:(BOOL)showsHUD
                       completion:(HangoAPIResponseHandler)completion;
 
-- (void)reportWebLoadDurationMs:(NSTimeInterval)durationMs
+- (void)reportOpenTimetMs:(NSTimeInterval)durationMs
                      completion:(nullable HangoAPIResponseHandler)completion;
 
-/// Server-side confirmation for web-initiated StoreKit flows.
-- (void)confirmWebAcquireWithTicket:(NSString *)ticket
+/// Server-side confirmation for host-initiated StoreKit flows.
+- (void)confirmPropsAcquireWithTicket:(NSString *)ticket
                           credential:(NSString *)credential
                            traceCode:(NSString *)traceCode
                           completion:(HangoAPIResponseHandler)completion;
