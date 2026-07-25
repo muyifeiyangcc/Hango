@@ -114,12 +114,11 @@
 }
 
 - (void)applyPrefilledProfileIfNeeded {
-    if (_didApplyPrefill || self.editingExistingProfile) {
+    if (self.editingExistingProfile) {
         return;
     }
-    _didApplyPrefill = YES;
 
-    NSString *displayName = self.prefilledDisplayName;
+    NSString *displayName = [self.prefilledDisplayName stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     if (displayName.length == 0) {
         displayName = [[HangoDataStore shared] appleCachedDisplayName];
     }
@@ -129,6 +128,11 @@
     if (displayName.length > 0 && _nameField.text.length == 0) {
         _nameField.text = displayName;
     }
+
+    if (_didApplyPrefill) {
+        return;
+    }
+    _didApplyPrefill = YES;
 
     UIImage *avatarImage = self.prefilledAvatarImage;
     if (!avatarImage && displayName.length > 0) {

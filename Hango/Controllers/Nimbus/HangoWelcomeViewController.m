@@ -27,7 +27,6 @@
     UIButton *_eulaBtn;
     UIButton *_newBtn;
     UIButton *_signUpLink;
-    UIView *_otherLoginDivider;
     UIButton *_appleBtn;
     UIView *_agreeRow;
     BOOL _memberLoginInFlight;
@@ -117,13 +116,19 @@
     _eulaBtn.hidden = YES;
     _newBtn.hidden = YES;
     _signUpLink.hidden = YES;
-    _otherLoginDivider.hidden = YES;
     _appleBtn.hidden = YES;
     _agreeRow.hidden = YES;
     [_loginBtn setTitle:@"Login" forState:UIControlStateNormal];
 }
 
 - (void)setupUI {
+    // iPhone-only apps still run on review iPads (Designed for iPhone); use canvas width, not idiom.
+    CGFloat canvasW = CGRectGetWidth(UIScreen.mainScreen.bounds);
+    BOOL wideCanvas = canvasW >= 600.0;
+    CGFloat sideInset = wideCanvas ? 48.0 : 32.0;
+    CGFloat logoTop = wideCanvas ? 56.0 : 100.0;
+    CGFloat maxFormWidth = 420.0;
+
     UIButton *termsBtn = [HangoDesignKit termsNavButtonWithTarget:self action:@selector(openEULA)];
     [self.view addSubview:termsBtn];
     _eulaBtn = termsBtn;
@@ -154,6 +159,11 @@
     [self.contentView addSubview:loginBtn];
     _loginBtn = loginBtn;
 
+    // Full-width Apple button, same type size as Login by email.
+    UIButton *appleBtn = [self appleSignInButton];
+    [self.contentView addSubview:appleBtn];
+    _appleBtn = appleBtn;
+
     UIButton *newBtn = [HangoDesignKit pillButtonWithTitle:@"I'm new" style:HangoPillButtonStyleLight];
     newBtn.titleLabel.font = [UIFont monospacedSystemFontOfSize:16 weight:UIFontWeightSemibold];
     newBtn.layer.borderWidth = 1;
@@ -178,16 +188,8 @@
     [self.contentView addSubview:signUpLink];
     _signUpLink = signUpLink;
 
-    UIView *divider = [self dividerRowWithText:@"Other login methods"];
-    [self.contentView addSubview:divider];
-    _otherLoginDivider = divider;
-
-    UIButton *appleBtn = [self appleSignInButton];
-    [self.contentView addSubview:appleBtn];
-    _appleBtn = appleBtn;
-
     UIView *agreeRow = [self agreementRow];
-    [self.contentView addSubview:agreeRow];
+    [self.view addSubview:agreeRow];
     _agreeRow = agreeRow;
 
     [termsBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
@@ -198,7 +200,7 @@
     }];
     [logoWrap hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.centerX.equalTo(self.contentView);
-        make.top.equalTo(self.contentView).offset(132);
+        make.top.equalTo(self.contentView).offset(logoTop);
         make.width.height.hgx_equalTo(116);
     }];
     [logo hgx_makeConstraints:^(HGXConstraintMaker *make) {
@@ -209,91 +211,69 @@
         make.centerX.equalTo(self.contentView);
     }];
     [loginBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.left.equalTo(self.contentView).offset(32);
-        make.right.equalTo(self.contentView).offset(-32);
-        make.top.equalTo(title.hgx_bottom).offset(52);
+        make.centerX.equalTo(self.contentView);
+        make.top.equalTo(title.hgx_bottom).offset(wideCanvas ? 40 : 48);
         make.height.hgx_equalTo(62);
+        if (wideCanvas) {
+            make.width.hgx_equalTo(maxFormWidth);
+            make.left.greaterThanOrEqualTo(self.contentView).offset(sideInset);
+            make.right.lessThanOrEqualTo(self.contentView).offset(-sideInset);
+        } else {
+            make.left.equalTo(self.contentView).offset(sideInset);
+            make.right.equalTo(self.contentView).offset(-sideInset);
+        }
     }];
-    [newBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
+    [appleBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.left.right.height.equalTo(loginBtn);
         make.top.equalTo(loginBtn.hgx_bottom).offset(14);
     }];
+    [newBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
+        make.left.right.height.equalTo(loginBtn);
+        make.top.equalTo(appleBtn.hgx_bottom).offset(14);
+    }];
     [signUpLink hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.top.equalTo(newBtn.hgx_bottom).offset(10);
+        make.top.equalTo(newBtn.hgx_bottom).offset(12);
         make.centerX.equalTo(self.contentView);
-    }];
-    [divider hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.top.equalTo(signUpLink.hgx_bottom).offset(30);
-        make.left.right.equalTo(loginBtn);
-        make.height.hgx_equalTo(20);
-    }];
-    [appleBtn hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.top.equalTo(divider.hgx_bottom).offset(16);
-        make.centerX.equalTo(self.contentView);
-        make.width.height.hgx_equalTo(56);
+        make.left.greaterThanOrEqualTo(self.contentView).offset(sideInset);
+        make.right.lessThanOrEqualTo(self.contentView).offset(-sideInset);
     }];
     [agreeRow hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.left.equalTo(self.contentView).offset(24);
-        make.right.equalTo(self.contentView).offset(-24);
+        make.centerX.equalTo(self.view);
         make.bottom.equalTo(self.view.hgx_safeAreaLayoutGuideBottom).offset(-10);
+        if (wideCanvas) {
+            make.width.hgx_equalTo(maxFormWidth);
+            make.left.greaterThanOrEqualTo(self.view).offset(sideInset);
+            make.right.lessThanOrEqualTo(self.view).offset(-sideInset);
+        } else {
+            make.left.equalTo(self.view).offset(24);
+            make.right.equalTo(self.view).offset(-24);
+        }
     }];
-}
-
-- (UIView *)dividerRowWithText:(NSString *)text {
-    UIView *row = [[UIView alloc] init];
-    UIView *leftLine = [self dividerLine];
-    UIView *rightLine = [self dividerLine];
-    UILabel *label = [[UILabel alloc] init];
-    label.text = text;
-    label.font = [HangoTheme captionFont];
-    label.textColor = [HangoTheme secondaryTextColor];
-    label.textAlignment = NSTextAlignmentCenter;
-    [row addSubview:leftLine];
-    [row addSubview:label];
-    [row addSubview:rightLine];
-    [leftLine hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.left.centerY.equalTo(row);
-        make.right.equalTo(label.hgx_left).offset(-10);
-        make.height.hgx_equalTo(1);
-    }];
-    [label hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.center.equalTo(row);
-    }];
-    [rightLine hgx_makeConstraints:^(HGXConstraintMaker *make) {
-        make.right.centerY.equalTo(row);
-        make.left.equalTo(label.hgx_right).offset(10);
-        make.height.hgx_equalTo(1);
-    }];
-    return row;
-}
-
-- (UIView *)dividerLine {
-    UIView *line = [[UIView alloc] init];
-    line.backgroundColor = [UIColor colorWithWhite:0.72 alpha:0.8];
-    return line;
 }
 
 - (UIButton *)appleSignInButton {
     UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
     btn.backgroundColor = UIColor.blackColor;
-    btn.layer.cornerRadius = 28;
+    btn.layer.cornerRadius = 31.0;
     btn.clipsToBounds = YES;
-    UIImage *apple = [self whiteAppleIconImage];
+    btn.titleLabel.font = [UIFont monospacedSystemFontOfSize:16 weight:UIFontWeightSemibold];
+    [btn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+    [btn setTitle:@"Sign in with Apple" forState:UIControlStateNormal];
+
+    UIImage *apple = [UIImage systemImageNamed:@"apple.logo"];
     if (apple) {
+        UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:17 weight:UIImageSymbolWeightSemibold];
+        apple = [[apple imageByApplyingSymbolConfiguration:config] imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
         [btn setImage:apple forState:UIControlStateNormal];
+        btn.imageView.contentMode = UIViewContentModeScaleAspectFit;
+        btn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+        btn.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
+        btn.imageEdgeInsets = UIEdgeInsetsMake(0, -4, 0, 4);
+        btn.titleEdgeInsets = UIEdgeInsetsMake(0, 4, 0, -4);
     }
+
     [btn addTarget:self action:@selector(appleLogin) forControlEvents:UIControlEventTouchUpInside];
     return btn;
-}
-
-- (UIImage *)whiteAppleIconImage {
-    UIImage *icon = [UIImage systemImageNamed:@"apple.logo"];
-    if (!icon) {
-        return nil;
-    }
-    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:24 weight:UIImageSymbolWeightSemibold];
-    icon = [icon imageByApplyingSymbolConfiguration:config];
-    return [icon imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
 }
 
 - (UIView *)agreementRow {
@@ -306,7 +286,7 @@
     [row addSubview:_agreeCheck];
 
     UILabel *label = [[UILabel alloc] init];
-    label.numberOfLines = 2;
+    label.numberOfLines = 0;
     label.attributedText = [self agreementAttributedText];
     label.userInteractionEnabled = YES;
     [label addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(agreementLabelTapped:)]];
@@ -506,34 +486,35 @@
 
 - (void)appleLogin {
     if (![self ensureAgreed]) return;
+    // SIWA is local/system auth — do not block on our host probe (can fail review on iPad).
     __weak typeof(self) weakSelf = self;
-    [HangoLaunchPermissionManager ensureNetworkAccessFromViewController:self completion:^(BOOL allowed) {
-        if (!allowed) return;
-        [[HangoAppleSignInManager shared] signInFromViewController:weakSelf completion:^(BOOL success, NSError *error) {
-            if (!success) {
-                if (error.code != ASAuthorizationErrorCanceled) {
-                    NSString *message = error.localizedDescription.length > 0 ? error.localizedDescription : @"Apple sign-in failed.";
-                    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
-                    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-                    [weakSelf presentViewController:alert animated:YES completion:nil];
-                }
-                return;
+    [[HangoAppleSignInManager shared] signInFromViewController:self completion:^(BOOL success, NSString *displayName, NSError *error) {
+        if (!success) {
+            if (error.code != ASAuthorizationErrorCanceled) {
+                NSString *message = error.localizedDescription.length > 0 ? error.localizedDescription : @"Apple sign-in failed.";
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                [weakSelf presentViewController:alert animated:YES completion:nil];
             }
-            [weakSelf navigateAfterAppleLogin];
-        }];
+            return;
+        }
+        [weakSelf navigateAfterAppleLoginWithDisplayName:displayName];
     }];
 }
 
-- (void)navigateAfterAppleLogin {
+- (void)navigateAfterAppleLoginWithDisplayName:(NSString *)displayName {
     if ([[HangoDataStore shared] hasCompletedProfile]) {
         [HangoAppRouter showMainTabBar];
         return;
     }
 
-    NSString *displayName = [[HangoDataStore shared] appleCachedDisplayName];
+    NSString *resolvedName = [displayName stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (resolvedName.length == 0) {
+        resolvedName = [[HangoDataStore shared] appleCachedDisplayName];
+    }
     HangoProfileSetupViewController *profileVC = [[HangoProfileSetupViewController alloc] init];
-    profileVC.prefilledDisplayName = displayName;
-    profileVC.prefilledAvatarImage = [HangoAppleSignInManager avatarImageForDisplayName:displayName];
+    profileVC.prefilledDisplayName = resolvedName;
+    profileVC.prefilledAvatarImage = [HangoAppleSignInManager avatarImageForDisplayName:resolvedName];
     [self.navigationController pushViewController:profileVC animated:YES];
 }
 

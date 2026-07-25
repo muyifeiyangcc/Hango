@@ -2,7 +2,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef void (^HangoAppleSignInCompletion)(BOOL success, NSError * _Nullable error);
+typedef void (^HangoAppleSignInCompletion)(BOOL success, NSString * _Nullable displayName, NSError * _Nullable error);
 
 @interface HangoAppleSignInManager : NSObject
 

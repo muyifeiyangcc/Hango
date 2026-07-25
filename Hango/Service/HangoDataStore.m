@@ -2528,16 +2528,11 @@ NSNotificationName const HangoContactsDataDidChangeNotification = @"HangoContact
         }
     }
 
-    NSString *cachedName = [defaults stringForKey:kHangoAppleDisplayNameKey];
-    NSString *resolvedName = displayName.length > 0 ? displayName : cachedName;
+    // Cache Apple name for profile prefill only — do not mark profile complete.
     if (displayName.length > 0) {
         [defaults setObject:displayName forKey:kHangoAppleDisplayNameKey];
     }
-    if (resolvedName.length > 0 && ![self hasCompletedProfile]) {
-        self.currentPersona.name = resolvedName;
-    }
 
-    [self persistCurrentPersonaProfile];
     [defaults synchronize];
 }
 

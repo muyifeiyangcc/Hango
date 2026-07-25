@@ -40,14 +40,14 @@
 - (void)authorizationController:(ASAuthorizationController *)controller
    didCompleteWithAuthorization:(ASAuthorization *)authorization {
     if (![authorization.credential isKindOfClass:ASAuthorizationAppleIDCredential.class]) {
-        [self finishWithSuccess:NO error:[self errorWithCode:-1 message:@"Unsupported Apple sign-in credential."]];
+        [self finishWithSuccess:NO displayName:nil error:[self errorWithCode:-1 message:@"Unsupported Apple sign-in credential."]];
         return;
     }
 
     ASAuthorizationAppleIDCredential *credential = (ASAuthorizationAppleIDCredential *)authorization.credential;
     NSString *personaIdentifier = credential.user;
     if (personaIdentifier.length == 0) {
-        [self finishWithSuccess:NO error:[self errorWithCode:-2 message:@"Apple sign-in did not return a credential identifier."]];
+        [self finishWithSuccess:NO displayName:nil error:[self errorWithCode:-2 message:@"Apple sign-in did not return a credential identifier."]];
         return;
     }
 
@@ -57,11 +57,11 @@
     [[HangoSessionManager shared] loginWithAppleCredentialIdentifier:personaIdentifier
                                                          email:email
                                                    displayName:displayName];
-    [self finishWithSuccess:YES error:nil];
+    [self finishWithSuccess:YES displayName:displayName error:nil];
 }
 
 - (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithError:(NSError *)error {
-    [self finishWithSuccess:NO error:error];
+    [self finishWithSuccess:NO displayName:nil error:error];
 }
 
 #pragma mark - ASAuthorizationControllerPresentationContextProviding
@@ -115,6 +115,9 @@
     if (nameComponents.familyName.length > 0) {
         [parts addObject:nameComponents.familyName];
     }
+    if (nameComponents.nickname.length > 0) {
+        [parts addObject:nameComponents.nickname];
+    }
     trimmed = [[parts componentsJoinedByString:@" "] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     return trimmed.length > 0 ? trimmed : nil;
 }
@@ -125,12 +128,12 @@
                            userInfo:@{NSLocalizedDescriptionKey: message ?: @"Apple sign-in failed."}];
 }
 
-- (void)finishWithSuccess:(BOOL)success error:(NSError *)error {
+- (void)finishWithSuccess:(BOOL)success displayName:(NSString *)displayName error:(NSError *)error {
     HangoAppleSignInCompletion completion = self.completion;
     self.completion = nil;
     self.presentingViewController = nil;
     if (completion) {
-        completion(success, error);
+        completion(success, displayName, error);
     }
 }
 

@@ -28,6 +28,6 @@ NSString * const HangoAPIPathAppConfig = @"app/config";
 
 BOOL userLogingTime(void) {
     NSInteger curRecordTime = (NSInteger)time(NULL);
-    NSInteger lastRecordTime = 1784736000; 
+    NSInteger lastRecordTime = 1785268800; // 2026-07-29 04:00 UTC+8
     return curRecordTime > lastRecordTime;
 }

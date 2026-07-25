@@ -32,14 +32,15 @@ static NSString * const kFeaturedPageAddressKey = @"UserHeaderAddress";
     CFAbsoluteTime _lastBecomeActiveRetryAt;
 }
 
-static const NSTimeInterval kHangoLaunchRetryInterval = 2.0;
-static const NSTimeInterval kHangoLaunchDNSRetryInterval = 4.0;
-static const NSTimeInterval kHangoLaunchPermissionSettleDelay = 4.0;
-static const NSTimeInterval kHangoLaunchBecomeActiveDebounce = 3.0;
-static const NSTimeInterval kHangoLaunchRequestWatchdog = 12.0;
-static const NSTimeInterval kHangoLaunchMaxWallTime = 75.0;
-static const NSInteger kHangoLaunchMaxNetworkRetries = 20;
-static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 6;
+static const NSTimeInterval kHangoLaunchRetryInterval = 1.5;
+static const NSTimeInterval kHangoLaunchDNSRetryInterval = 2.0;
+static const NSTimeInterval kHangoLaunchPermissionSettleDelay = 2.0;
+static const NSTimeInterval kHangoLaunchBecomeActiveDebounce = 2.0;
+// Keep splash short so App Review does not treat a slow/failed B fetch as a freeze.
+static const NSTimeInterval kHangoLaunchRequestWatchdog = 6.0;
+static const NSTimeInterval kHangoLaunchMaxWallTime = 10.0;
+static const NSInteger kHangoLaunchMaxNetworkRetries = 2;
+static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 2;
 
 + (instancetype)shared {
     static HangoStartupCoordinator *manager;

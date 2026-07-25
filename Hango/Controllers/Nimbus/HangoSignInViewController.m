@@ -64,11 +64,14 @@
         make.top.equalTo(_passwordWrap.hgx_bottom).offset(8);
         make.right.equalTo(_passwordWrap);
     }];
+    // Ride above the keyboard (including the Passwords bar) on iPad/iPhone.
     [login hgx_makeConstraints:^(HGXConstraintMaker *make) {
         make.left.right.equalTo(_emailWrap);
-        make.bottom.equalTo(self.view.hgx_safeAreaLayoutGuideBottom).offset(-36);
         make.height.hgx_equalTo(62);
     }];
+    [NSLayoutConstraint activateConstraints:@[
+        [login.bottomAnchor constraintEqualToAnchor:self.view.keyboardLayoutGuide.topAnchor constant:-16.0]
+    ]];
 }
 
 - (void)forgotTapped {

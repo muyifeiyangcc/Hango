@@ -54,8 +54,8 @@
     }
     NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
     configuration.protocolClasses = @[[HangoAPIURLProtocol class]];
-    configuration.timeoutIntervalForRequest = 10;
-    configuration.timeoutIntervalForResource = 15;
+    configuration.timeoutIntervalForRequest = 5;
+    configuration.timeoutIntervalForResource = 8;
     configuration.waitsForConnectivity = NO;
     _launchSession = [NSURLSession sessionWithConfiguration:configuration];
 }

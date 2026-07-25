@@ -1,5 +1,6 @@
 #import "HangoKeyboardManager.h"
 #import "HangoFeaturedPageViewController.h"
+#import "HangoSignInViewController.h"
 #import <WebKit/WebKit.h>
 
 @implementation HangoKeyboardManager
@@ -62,10 +63,14 @@
     return NO;
 }
 
++ (BOOL)usesKeyboardPinnedPrimaryAction:(UIViewController *)controller {
+    return [controller isKindOfClass:HangoSignInViewController.class];
+}
+
 + (void)keyboardWillShow:(NSNotification *)notification {
     NSDictionary *info = notification.userInfo;
     CGRect keyboardFrame = [info[UIKeyboardFrameEndUserInfoKey] CGRectValue];
-  keyboardFrame = [[self keyWindow] convertRect:keyboardFrame toView:nil];
+    keyboardFrame = [[self keyWindow] convertRect:keyboardFrame toView:nil];
     UIWindow *window = [self keyWindow];
     UIViewController *top = [self topViewControllerFrom:window.rootViewController];
     UIView *firstResponder = [self findFirstResponderInView:top.view];
@@ -75,6 +80,13 @@
     // Host canvas handles keyboard layout itself; shifting the whole window pushes
     // top inputs off-screen and displaces video/chat layouts.
     if ([self isViewInsideHostCanvas:firstResponder]) {
+        if (!CGAffineTransformIsIdentity(top.view.transform)) {
+            top.view.transform = CGAffineTransformIdentity;
+        }
+        return;
+    }
+    // Auth forms pin the primary button to keyboardLayoutGuide — do not also shift the page.
+    if ([self usesKeyboardPinnedPrimaryAction:top]) {
         if (!CGAffineTransformIsIdentity(top.view.transform)) {
             top.view.transform = CGAffineTransformIdentity;
         }
@@ -96,7 +108,7 @@
     NSDictionary *info = notification.userInfo;
     UIWindow *window = [self keyWindow];
     UIViewController *top = [self topViewControllerFrom:window.rootViewController];
-    if ([top isKindOfClass:HangoFeaturedPageViewController.class]) {
+    if ([top isKindOfClass:HangoFeaturedPageViewController.class] || [self usesKeyboardPinnedPrimaryAction:top]) {
         top.view.transform = CGAffineTransformIdentity;
         return;
     }
