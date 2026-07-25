@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build IPA
-    runs-on: getmac-tahoe
+    runs-on: macos-26
     timeout-minutes: 90
 
     env:
