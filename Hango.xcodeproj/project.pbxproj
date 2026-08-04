@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		17DE86F9302184C00017248F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17DE86F8302184C00017248F /* StoreKit.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		17DE86F8302184C00017248F /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		17EBAF932FF21E4C003F5A0D /* Hango.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hango.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -36,16 +41,26 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				17DE86F9302184C00017248F /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		17DE86F7302184C00017248F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				17DE86F8302184C00017248F /* StoreKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		17EBAF8A2FF21E4C003F5A0D = {
 			isa = PBXGroup;
 			children = (
 				17EBAF952FF21E4C003F5A0D /* Hango */,
+				17DE86F7302184C00017248F /* Frameworks */,
 				17EBAF942FF21E4C003F5A0D /* Products */,
 			);
 			sourceTree = "<group>";
