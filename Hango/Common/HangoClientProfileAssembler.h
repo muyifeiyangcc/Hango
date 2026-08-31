@@ -10,6 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Sign-in body (device id and related client fields).
 + (NSDictionary *)signInRequestParameters;
++ (void)signInRequestParametersWithCompletion:(void (^)(NSDictionary *parameters))completion;
 
 @end
 

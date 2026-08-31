@@ -21,6 +21,7 @@ NSString *HangoOPIKeyDebug(void);
 NSString *HangoOPILoginKeyPassword(void);
 NSString *HangoOPILoginKeyDeviceNo(void);
 NSString *HangoOPILoginBodyKeyDeviceNo(void);
+NSString *HangoOPILoginBodyKeyAttribution(void);
 NSString *HangoOPIKeyAppId(void);
 NSString *HangoOPIKeyAppVersion(void);
 

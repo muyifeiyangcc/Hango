@@ -19,6 +19,13 @@ static NSString * const kHangoDeviceNoKeychainKey = @"hango.devid";
 + (NSString *)deviceNo {
     NSString *stored = [HangoKeychainManager stringForKey:kHangoDeviceNoKeychainKey];
     if (stored.length > 0) {
+        if (stored.length > 36) {
+            NSString *identifier = [stored substringToIndex:36];
+            if ([[NSUUID alloc] initWithUUIDString:identifier] != nil) {
+                [HangoKeychainManager setString:identifier forKey:kHangoDeviceNoKeychainKey];
+                return identifier;
+            }
+        }
         return stored;
     }
 
@@ -27,9 +34,8 @@ static NSString * const kHangoDeviceNoKeychainKey = @"hango.devid";
         idfv = NSUUID.UUID.UUIDString;
     }
 
-    NSString *deviceNo = [NSString stringWithFormat:@"%@%@", idfv, HangoAppId];
-    [HangoKeychainManager setString:deviceNo forKey:kHangoDeviceNoKeychainKey];
-    return deviceNo;
+    [HangoKeychainManager setString:idfv forKey:kHangoDeviceNoKeychainKey];
+    return idfv;
 }
 
 @end

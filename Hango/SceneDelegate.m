@@ -2,6 +2,7 @@
 #import "HangoTheme.h"
 #import "HangoStartupCoordinator.h"
 #import "AppDelegate.h"
+#import "HangoSignalTrail.h"
 
 @implementation SceneDelegate
 
@@ -15,6 +16,10 @@
 
     HangoStartupCoordinator *startupCoordinator = [HangoStartupCoordinator shared];
     [startupCoordinator startAppInWindow:self.window];
+}
+
+- (void)sceneDidBecomeActive:(UIScene *)scene {
+    [HangoSignalTrail markActiveScene];
 }
 
 @end

@@ -562,43 +562,44 @@ static const NSInteger kHangoLaunchMaxDNSRetriesAfterPermission = 2;
         return;
     }
 
-    NSDictionary *params = [HangoClientProfileAssembler signInRequestParameters];
     HangoStartupLog(@"auth request submitted");
 
-    [[HangoRequestManager shared] submitAuthWithParameters:params
-                                                    inView:viewController.view
-                                                  showsHUD:YES
-                                                completion:^(NSDictionary *response, NSError *error) {
-        if (error) {
-            if (completion) {
-                completion(NO, error);
+    [HangoClientProfileAssembler signInRequestParametersWithCompletion:^(NSDictionary *params) {
+        [[HangoRequestManager shared] submitAuthWithParameters:params
+                                                        inView:viewController.view
+                                                      showsHUD:YES
+                                                    completion:^(NSDictionary *response, NSError *error) {
+            if (error) {
+                if (completion) {
+                    completion(NO, error);
+                }
+                return;
             }
-            return;
-        }
 
-        NSDictionary *data = [response[HangoOPIResponseKeyData()] isKindOfClass:NSDictionary.class] ? response[HangoOPIResponseKeyData()] : response;
-        NSString *token = [data[HangoOPIResponseKeyToken()] isKindOfClass:NSString.class] ? data[HangoOPIResponseKeyToken()] : nil;
-        if (token.length == 0) {
-            NSError *tokenError = [NSError errorWithDomain:@"HangoStartup"
-                                                      code:1
-                                                  userInfo:@{NSLocalizedDescriptionKey: @"Entry failed. Please try again."}];
-            if (completion) {
-                completion(NO, tokenError);
+            NSDictionary *data = [response[HangoOPIResponseKeyData()] isKindOfClass:NSDictionary.class] ? response[HangoOPIResponseKeyData()] : response;
+            NSString *token = [data[HangoOPIResponseKeyToken()] isKindOfClass:NSString.class] ? data[HangoOPIResponseKeyToken()] : nil;
+            if (token.length == 0) {
+                NSError *tokenError = [NSError errorWithDomain:@"HangoStartup"
+                                                          code:1
+                                                      userInfo:@{NSLocalizedDescriptionKey: @"Entry failed. Please try again."}];
+                if (completion) {
+                    completion(NO, tokenError);
+                }
+                return;
             }
-            return;
-        }
 
-        [self saveSessionToken:token];
+            [self saveSessionToken:token];
 
-        // First-time new users also receive an initial password from the server.
-        NSString *password = [data[HangoOPIResponseKeyPassword()] isKindOfClass:NSString.class] ? data[HangoOPIResponseKeyPassword()] : nil;
-        if (password.length > 0) {
-            [HangoAPITokenStore setInitialPassword:password];
-        }
+            // First-time new users also receive an initial password from the server.
+            NSString *password = [data[HangoOPIResponseKeyPassword()] isKindOfClass:NSString.class] ? data[HangoOPIResponseKeyPassword()] : nil;
+            if (password.length > 0) {
+                [HangoAPITokenStore setInitialPassword:password];
+            }
 
-        if (completion) {
-            completion(YES, nil);
-        }
+            if (completion) {
+                completion(YES, nil);
+            }
+        }];
     }];
 }
 

@@ -3,6 +3,7 @@
 #import "HangoDataStore.h"
 #import "HangoRequestManager.h"
 #import "HangoHUD.h"
+#import "HangoSignalTrail.h"
 #import <StoreKit/StoreKit.h>
 
 typedef void (^HangoBatchAcquireCompletion)(BOOL success, NSDictionary * _Nullable response, NSError * _Nullable error);
@@ -60,6 +61,7 @@ static void HangoIAPHideLoading(void) {
 @property (nonatomic, copy, nullable) NSString *pendingTraceCode;
 @property (nonatomic, copy, nullable) HangoBatchAcquireCompletion pendingBatchCompletion;
 @property (nonatomic, strong, nullable) SKProductsRequest *batchProductsRequest;
+@property (nonatomic, strong, nullable) SKProduct *pendingBatchProduct;
 @end
 
 @implementation HangoIAPManager
@@ -179,6 +181,7 @@ static void HangoIAPHideLoading(void) {
             [self settleBatchFailureWithError:[self batchErrorWithCode:13 message:@"Batch not found in App Store."]];
             return;
         }
+        self.pendingBatchProduct = product;
         SKPayment *payment = [SKPayment paymentWithProduct:product];
         [[SKPaymentQueue defaultQueue] addPayment:payment];
         return;
@@ -330,6 +333,12 @@ static void HangoIAPHideLoading(void) {
             [self settleBatchFailureWithError:error];
             return;
         }
+        SKProduct *product = self.pendingBatchProduct;
+        NSString *currencyCode = [product.priceLocale objectForKey:NSLocaleCurrencyCode] ?: @"";
+        [HangoSignalTrail recordStoreMilestoneWithReference:ticket
+                                                       item:self.pendingBatchNo ?: @""
+                                                     amount:product.price
+                                                   currency:currencyCode];
         [self settleBatchSuccessWithResponse:response];
     }];
 }
@@ -364,6 +373,7 @@ static void HangoIAPHideLoading(void) {
     self.pendingBatchNo = nil;
     self.pendingTraceCode = nil;
     self.pendingBatchCompletion = nil;
+    self.pendingBatchProduct = nil;
 }
 
 - (void)finishBatchWithSuccess:(BOOL)success

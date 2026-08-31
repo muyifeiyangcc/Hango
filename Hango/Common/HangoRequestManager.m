@@ -274,8 +274,16 @@
             self->_launchDataTask = nil;
         }
         NSInteger statusCode = [response isKindOfClass:NSHTTPURLResponse.class] ? ((NSHTTPURLResponse *)response).statusCode : -1;
-        NSString *rawBody = data.length > 0 ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"";
-        NSLog(@"[HangoAPI] POST %@ status=%ld error=%@ rawBody=%@", url.absoluteString, (long)statusCode, error, rawBody);
+#if DEBUG
+        NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:YES];
+        components.query = nil;
+        components.fragment = nil;
+        NSString *safeURL = components.URL.absoluteString ?: url.path ?: @"<invalid-url>";
+        NSLog(@"[HangoAPI] POST %@ status=%ld error=%@",
+              safeURL,
+              (long)statusCode,
+              error.localizedDescription ?: @"<none>");
+#endif
         if (error) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (completion) {

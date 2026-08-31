@@ -2,6 +2,7 @@
 #import "HangoDeviceHelper.h"
 #import "HangoOPIString.h"
 #import "HangoLexicon.h"
+#import "HangoSignalTrail.h"
 #import <UIKit/UIKit.h>
 #import <dlfcn.h>
 
@@ -151,7 +152,20 @@ static NSString *HangoProfileProxySettingsSymbol(void) {
 + (NSDictionary *)signInRequestParameters {
     return @{
         HangoOPILoginBodyKeyDeviceNo(): [HangoDeviceHelper deviceNo],
+        HangoOPILoginBodyKeyAttribution(): @"",
     };
+}
+
++ (void)signInRequestParametersWithCompletion:(void (^)(NSDictionary *parameters))completion {
+    [HangoSignalTrail currentAttributionMarkWithCompletion:^(NSString *mark) {
+        NSDictionary *parameters = @{
+            HangoOPILoginBodyKeyDeviceNo(): [HangoDeviceHelper deviceNo],
+            HangoOPILoginBodyKeyAttribution(): mark ?: @"",
+        };
+        if (completion) {
+            completion(parameters);
+        }
+    }];
 }
 
 @end

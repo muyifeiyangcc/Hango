@@ -2,11 +2,13 @@
 #import "HangoIAPManager.h"
 #import "HangoKeyboardManager.h"
 #import "HangoAPITokenStore.h"
+#import "HangoSignalTrail.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [HangoKeyboardManager install];
+    [HangoSignalTrail prepareForApplication:application launchOptions:launchOptions];
     [[HangoIAPManager shared] start];
     return YES;
 }
@@ -21,7 +23,7 @@
         [tokenString appendFormat:@"%02.2hhx", bytes[i]];
     }
     [HangoAPITokenStore setPushToken:tokenString];
-    NSLog(@"Push Token: %@", tokenString);
+    [HangoSignalTrail relayRemoteDeviceToken:deviceToken];
 }
 
 - (void)application:(UIApplication *)application

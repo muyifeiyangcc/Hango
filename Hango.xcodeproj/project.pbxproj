@@ -8,11 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		17DE86F9302184C00017248F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17DE86F8302184C00017248F /* StoreKit.framework */; };
+		AE638E0CBDDEA4C210DEFB16 /* Pods_Hango.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE730BA7023C430C7312102E /* Pods_Hango.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		17DE86F8302184C00017248F /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		17EBAF932FF21E4C003F5A0D /* Hango.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hango.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50A271829B76A73EB260FFCE /* Pods-Hango.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hango.debug.xcconfig"; path = "Target Support Files/Pods-Hango/Pods-Hango.debug.xcconfig"; sourceTree = "<group>"; };
+		DE730BA7023C430C7312102E /* Pods_Hango.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Hango.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F350A1A3F28581EA99C3E54D /* Pods-Hango.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hango.release.xcconfig"; path = "Target Support Files/Pods-Hango/Pods-Hango.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -42,6 +46,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				17DE86F9302184C00017248F /* StoreKit.framework in Frameworks */,
+				AE638E0CBDDEA4C210DEFB16 /* Pods_Hango.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -52,6 +57,7 @@
 			isa = PBXGroup;
 			children = (
 				17DE86F8302184C00017248F /* StoreKit.framework */,
+				DE730BA7023C430C7312102E /* Pods_Hango.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -62,6 +68,7 @@
 				17EBAF952FF21E4C003F5A0D /* Hango */,
 				17DE86F7302184C00017248F /* Frameworks */,
 				17EBAF942FF21E4C003F5A0D /* Products */,
+				EC541303B490C37C18FDF0AF /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -73,6 +80,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		EC541303B490C37C18FDF0AF /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				50A271829B76A73EB260FFCE /* Pods-Hango.debug.xcconfig */,
+				F350A1A3F28581EA99C3E54D /* Pods-Hango.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -80,9 +97,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 17EBAFAB2FF21E4D003F5A0D /* Build configuration list for PBXNativeTarget "Hango" */;
 			buildPhases = (
+				1F9471C13B34082E3A90F20D /* [CP] Check Pods Manifest.lock */,
 				17EBAF8F2FF21E4C003F5A0D /* Sources */,
 				17EBAF902FF21E4C003F5A0D /* Frameworks */,
 				17EBAF912FF21E4C003F5A0D /* Resources */,
+				74C2DA719DB1EBC8E8047878 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -139,6 +158,48 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		1F9471C13B34082E3A90F20D /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Hango-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		74C2DA719DB1EBC8E8047878 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Hango/Pods-Hango-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Hango/Pods-Hango-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Hango/Pods-Hango-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		17EBAF8F2FF21E4C003F5A0D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -152,6 +213,7 @@
 /* Begin XCBuildConfiguration section */
 		17EBAFAC2FF21E4D003F5A0D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 50A271829B76A73EB260FFCE /* Pods-Hango.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -197,6 +259,7 @@
 		};
 		17EBAFAD2FF21E4D003F5A0D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F350A1A3F28581EA99C3E54D /* Pods-Hango.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

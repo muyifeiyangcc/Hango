@@ -121,6 +121,9 @@ NSString *HangoOPILoginBodyKeyDeviceNo(void) {
     });
     return value;
 }
+NSString *HangoOPILoginBodyKeyAttribution(void) {
+    return @"hanga";
+}
 NSString *HangoOPIKeyAppId(void) {
     static NSString *value;
     static dispatch_once_t onceToken;

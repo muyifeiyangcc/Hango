@@ -1,0 +1,35 @@
+PODS:
+  - Adjust (5.8.0):
+    - Adjust/Adjust (= 5.8.0)
+  - Adjust/Adjust (5.8.0):
+    - AdjustSignature (= 5.0.0)
+  - AdjustSignature (5.0.0)
+  - FBAEMKit (18.1.0):
+    - FBSDKCoreKit_Basics (= 18.1.0)
+  - FBSDKCoreKit (18.1.0):
+    - FBAEMKit (= 18.1.0)
+    - FBSDKCoreKit_Basics (= 18.1.0)
+  - FBSDKCoreKit_Basics (18.1.0)
+
+DEPENDENCIES:
+  - Adjust
+  - FBSDKCoreKit
+
+SPEC REPOS:
+  trunk:
+    - Adjust
+    - AdjustSignature
+    - FBAEMKit
+    - FBSDKCoreKit
+    - FBSDKCoreKit_Basics
+
+SPEC CHECKSUMS:
+  Adjust: 688831c353a5ecb137d7e9b20dcfebebb3469780
+  AdjustSignature: 2185aff42830b87214d84bee45da09c65129c12c
+  FBAEMKit: 64088ff0380f50e4a56e2ee07d984f7f1aef7595
+  FBSDKCoreKit: 8390ea3a8fac186f444275f31d7512e760b47cba
+  FBSDKCoreKit_Basics: 3a0005c78b355388bf2df5c6dbe6381b77ea4be3
+
+PODFILE CHECKSUM: 60302383ac168eaa4cf3a0aae94c7ea913c86c3d
+
+COCOAPODS: 1.16.2

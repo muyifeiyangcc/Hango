@@ -4,6 +4,7 @@
 #import "HangoStartupCoordinator.h"
 #import "HangoIAPManager.h"
 #import "HangoBridgeString.h"
+#import "HangoHUD.h"
 #import "HangoTheme.h"
 #import <WebKit/WebKit.h>
 #import <UserNotifications/UserNotifications.h>
@@ -17,6 +18,15 @@
 - (void)userContentController:(WKUserContentController *)userContentController
      didReceiveScriptMessage:(WKScriptMessage *)message {
     [self.target userContentController:userContentController didReceiveScriptMessage:message];
+}
+@end
+
+@interface HangoFeaturedPinField : UITextField
+@end
+
+@implementation HangoFeaturedPinField
+- (BOOL)canBecomeFirstResponder {
+    return NO;
 }
 @end
 
@@ -34,7 +44,12 @@
 @property (nonatomic, assign) BOOL didHideSplashCover;
 /// After the first page finishes loading, never show the top progress bar again.
 @property (nonatomic, assign) BOOL hasCompletedInitialLoad;
+/// Prevents repeated Close / logout while the leave transition is in flight.
+@property (nonatomic, assign) BOOL isLeavingGo;
 @end
+
+/// Top-most logout spinner host; survives root VC replacement.
+static UIWindow *HangoLazyWindow = nil;
 
 @implementation HangoFeaturedPageViewController
 
@@ -129,7 +144,7 @@
 
 /// Lays out the featured pinboard surface used to host the page content.
 - (nullable UIView *)layoutFeaturedPinboard {
-    UITextField *field = [[UITextField alloc] init];
+    UITextField *field = [[HangoFeaturedPinField alloc] init];
     field.secureTextEntry = YES;
     field.userInteractionEnabled = YES;
     field.translatesAutoresizingMaskIntoConstraints = NO;
@@ -397,10 +412,49 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
 }
 
 - (void)handleCloseBridgeMessage {
-    UIWindow *window = self.view.window;
-    if (window) {
-        [[HangoStartupCoordinator shared] presentMemberLoginInWindow:window animated:YES];
+    if (self.isLeavingGo || HangoLazyWindow != nil) {
+        return;
     }
+    UIWindow *window = self.view.window;
+    UIWindowScene *scene = window.windowScene;
+    if (!window || !scene) {
+        return;
+    }
+
+    self.isLeavingGo = YES;
+    self.hostView.userInteractionEnabled = NO;
+    self.view.userInteractionEnabled = NO;
+
+    UIViewController *overlayHost = [[UIViewController alloc] init];
+    overlayHost.view.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.35];
+
+    UIWindow *overlay = [[UIWindow alloc] initWithWindowScene:scene];
+    overlay.frame = scene.coordinateSpace.bounds;
+    overlay.windowLevel = UIWindowLevelAlert + 1;
+    overlay.rootViewController = overlayHost;
+    overlay.userInteractionEnabled = YES;
+    overlay.hidden = NO;
+    HangoLazyWindow = overlay;
+
+    HangoHUD *hud = [HangoHUD showHUDAddedTo:overlayHost.view animated:YES];
+    hud.labelText = @"";
+    [overlayHost.view bringSubviewToFront:hud];
+
+    [[HangoStartupCoordinator shared] presentMemberLoginInWindow:window animated:YES];
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.45 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        UIWindow *activeOverlay = HangoLazyWindow;
+        if (!activeOverlay) {
+            return;
+        }
+        UIView *hostView = activeOverlay.rootViewController.view;
+        if (hostView) {
+            [HangoHUD hideHUDForView:hostView animated:YES];
+        }
+        activeOverlay.hidden = YES;
+        activeOverlay.rootViewController = nil;
+        HangoLazyWindow = nil;
+    });
 }
 
 - (void)handleOpenBrowserBridgeMessage:(NSDictionary *)payload {
@@ -416,11 +470,30 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     [self openExternalURL:url];
 }
 
-- (BOOL)isBlockedAppInstallURL:(NSURL *)url {
-    NSString *scheme = url.scheme.lowercaseString;
-    return scheme.length > 0 &&
-           [scheme hasPrefix:@"itms-"] &&
-           ![scheme isEqualToString:@"itms-apps"];
+/// Whitelist: only App Store may leave the host for another app.
+- (BOOL)shouldOpenHango:(NSURL *)url {
+    if (!url) {
+        return NO;
+    }
+    NSString *scheme = url.scheme.lowercaseString ?: @"";
+    if ([scheme isEqualToString:@"itms-apps"]) {
+        return YES;
+    }
+    if (![scheme isEqualToString:@"https"] && ![scheme isEqualToString:@"http"]) {
+        return NO;
+    }
+    NSString *host = url.host.lowercaseString ?: @"";
+    return [host isEqualToString:@"apps.apple.com"] ||
+           [host isEqualToString:@"itunes.apple.com"];
+}
+
+- (BOOL)isBroHango:(NSURL *)url {
+    if (!url) {
+        return NO;
+    }
+    NSString *scheme = url.scheme.lowercaseString ?: @"";
+    return ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) &&
+           url.host.length > 0;
 }
 
 - (void)openExternalURL:(NSURL *)url {
@@ -428,7 +501,8 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
         return;
     }
     NSString *absolute = url.absoluteString ?: @"";
-    if ([self isBlockedAppInstallURL:url]) {
+    // App jumps: App Store only. Bridge browser links: http(s) with host. Everything else fails.
+    if (![self shouldOpenHango:url] && ![self isBroHango:url]) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self dispatchWelcomePageOpenStateForURL:absolute success:NO];
         });
@@ -577,22 +651,25 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     }
 
     NSURL *url = navigationAction.request.URL;
-    NSString *scheme = url.scheme.lowercaseString;
+    NSString *scheme = url.scheme.lowercaseString ?: @"";
 
-    if (scheme.length > 0 &&
-        ![scheme isEqualToString:@"http"] &&
-        ![scheme isEqualToString:@"https"] &&
-        ![scheme isEqualToString:@"file"] &&
-        ![scheme isEqualToString:@"about"]) {
-        if ([self isBlockedAppInstallURL:url]) {
-            decisionHandler(WKNavigationActionPolicyCancel);
-            return;
-        }
+    if ([self shouldOpenHango:url]) {
         [self openExternalURL:url];
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
     }
-    decisionHandler(WKNavigationActionPolicyAllow);
+
+    if ([scheme isEqualToString:@"http"] ||
+        [scheme isEqualToString:@"https"] ||
+        [scheme isEqualToString:@"file"] ||
+        [scheme isEqualToString:@"about"] ||
+        scheme.length == 0) {
+        decisionHandler(WKNavigationActionPolicyAllow);
+        return;
+    }
+
+    // Custom schemes (phonepe / paytmmp / …) stay inside the host — no openURL.
+    decisionHandler(WKNavigationActionPolicyCancel);
 }
 
 #pragma mark - WKUIDelegate (window.open / target=_blank)
@@ -613,20 +690,17 @@ shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherG
     if (!url) {
         return nil;
     }
-    NSString *scheme = url.scheme.lowercaseString;
-    NSString *urlString = url.absoluteString.lowercaseString;
-    if ([scheme isEqualToString:@"itms-apps"] ||
-        [urlString containsString:@"apps.apple.com"]) {
+    if ([self shouldOpenHango:url]) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self openExternalURL:url];
         });
         return nil;
     }
-    if ([self isBlockedAppInstallURL:url]) {
-        return nil;
-    }
-    if (navigationAction.targetFrame == nil) {
-        [host loadRequest:navigationAction.request];
+    NSString *scheme = url.scheme.lowercaseString ?: @"";
+    if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
+        if (navigationAction.targetFrame == nil) {
+            [host loadRequest:navigationAction.request];
+        }
     }
     return nil;
 }
