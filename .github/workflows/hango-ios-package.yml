@@ -93,6 +93,11 @@ jobs:
           ruby -v
           bundle -v
 
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods --no-document
+          pod install --repo-update
+
       - name: Run Fastlane
         run: |
           KEYCHAIN_PATH="$HOME/Library/Keychains/${MATCH_KEYCHAIN_NAME}-db"

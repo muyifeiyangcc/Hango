@@ -72,7 +72,7 @@ platform :ios do
     UI.important("Building #{marketing_version} (#{next_build_number})")
 
     gym(
-      project: "Hango.xcodeproj",
+      workspace: "Hango.xcworkspace",
       scheme: ENV["SCHEME"],
       clean: true,
       codesigning_identity: "Apple Distribution",
